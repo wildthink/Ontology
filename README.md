@@ -25,6 +25,9 @@ dependencies: [
 ]
 ```
 
+## Resource
+[Apple Unified Maps URL](https://developer.apple.com/documentation/mapkit/unified-map-urls)
+
 ## Supported Types
 
 ### Schema.org Vocabulary

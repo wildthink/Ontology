@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 
 /// Geographic coordinates of a place or event following Schema.org ontology
-public struct GeoCoordinates: Hashable, Sendable {
+public struct GeoCoordinates: Codable, Hashable, Sendable {
     /// The latitude of a location (WGS 84)
     public var latitude: Double
 
@@ -12,6 +12,10 @@ public struct GeoCoordinates: Hashable, Sendable {
     /// The elevation of a location (WGS 84) in meters
     public var elevation: Double?
 
+    /// ICLLocationCoordinate2D  with latitude and longitude
+    public var coordinates: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
     /// Initialize GeoCoordinates with latitude and longitude
     public init(latitude: Double, longitude: Double, elevation: Double? = nil) {
         self.latitude = latitude
@@ -27,34 +31,26 @@ public struct GeoCoordinates: Hashable, Sendable {
     }
 }
 
-extension GeoCoordinates: Codable {
-    private enum CodingKeys: String, CodingKey {
-        case latitude, longitude, elevation
+//    https://developer.apple.com/documentation/mapkit/unified-map-urls
+
+public extension GeoCoordinates {
+    var uri: URL {
+        var cp = URLComponents()
+        cp.scheme = "maps"
+        // frame, or place for placard
+        cp.path = "frame" // or "place"
+        cp.queryItems = [
+            .init(name: "center", value: "\(latitude),\(longitude)")
+        ]
+        return cp.url!
     }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Encode @context if we're at the root level
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-
-        // Encode @type
-        try container.encode(String(describing: Self.self), forKey: .type)
-
-        // Encode properties
-        try container.encode(latitude, forKey: .attribute(.latitude))
-        try container.encode(longitude, forKey: .attribute(.longitude))
-        try container.encodeIfPresent(elevation, forKey: .attribute(.elevation))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Decode properties
-        latitude = try container.decode(Double.self, forKey: .attribute(.latitude))
-        longitude = try container.decode(Double.self, forKey: .attribute(.longitude))
-        elevation = try container.decodeIfPresent(Double.self, forKey: .attribute(.elevation))
+    
+    var url: URL {
+        var cp = URLComponents(string:"https://maps.apple.com")!
+        cp.path = "frame" // or "place"
+        cp.queryItems = [
+            .init(name: "center", value: "\(latitude),\(longitude)")
+        ]
+        return cp.url!
     }
 }
