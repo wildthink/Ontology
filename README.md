@@ -2,9 +2,9 @@
 
 A Swift library for working with structured data.
 This library provides [JSON-LD][json-ld] serializable types
-that can represent entities from various vocabularies, 
-with a focus on [Schema.org][schema.org]. 
-It includes convenience initializers for types from Apple frameworks, like 
+that can represent entities from various vocabularies,
+with a focus on [Schema.org][schema.org].
+It includes convenience initializers for types from Apple frameworks, like
 [Contacts][framework-contacts] and [EventKit][framework-eventkit].
 
 ## Requirements
@@ -21,7 +21,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/loopwork-ai/ontology.git", from: "0.6.0")
+    .package(url: "https://github.com/mattt/Ontology.git", from: "0.8.0")
 ]
 ```
 
@@ -43,6 +43,7 @@ Supported Schema.org types and their Apple framework equivalents:
 | [Organization](https://schema.org/Organization) | [CNContact](https://developer.apple.com/documentation/contacts/cncontact) | Represents an organization with properties like name and contact info |
 | [Person](https://schema.org/Person) | [CNContact](https://developer.apple.com/documentation/contacts/cncontact) | Represents a person with properties like name, contact info, and relationships |
 | [Place](https://schema.org/Place) | [MKPlacemark](https://developer.apple.com/documentation/mapkit/mkplacemark), [MKMapItem](https://developer.apple.com/documentation/mapkit/mkmapitem) | Represents a geographical location, specific address, or point of interest |
+| [ItemList](https://schema.org/ItemList) | [EKCalendar](https://developer.apple.com/documentation/eventkit/ekcalendar) | Represents a list of items with properties like name, identifier, and item count |
 | [PlanAction](https://schema.org/PlanAction) | [EKReminder](https://developer.apple.com/documentation/eventkit/ekreminder) | Represents a planned action or task with properties like name, description, due date, and completion status |
 | [PostalAddress](https://schema.org/PostalAddress) | [CNPostalAddress](https://developer.apple.com/documentation/contacts/cnpostaladdress) | Represents a physical address with street, city, region, etc. |
 | [QuantitativeValue](https://schema.org/QuantitativeValue) | [Measurement](https://developer.apple.com/documentation/foundation/measurement) | Represents measurements with standardized units using UN/CEFACT Common Codes |
@@ -102,7 +103,7 @@ let contact = CNMutableContact()
 contact.givenName = "Jane"
 contact.familyName = "Smith"
 contact.emailAddresses = [
-    CNLabeledValue(label: CNLabelHome, 
+    CNLabeledValue(label: CNLabelHome,
                    value: "jane.smith@example.com" as NSString)
 ]
 
@@ -114,7 +115,7 @@ let person = Person(contact)
 
 By default, `DateTime` objects are encoded with their specified time zone,
 or GMT/UTC if none is specified.
-You can override the time zone used during encoding by providing 
+You can override the time zone used during encoding by providing
 a specific `TimeZone` in the `JSONEncoder`'s `userInfo` dictionary:
 
 ```swift
@@ -144,14 +145,15 @@ So to recap, the date encoding priority is:
 2. `TimeZone` from the `DateTime` object (if specified)
 3. GMT/UTC (default fallback)
 
+## License
+
+This project is available under the MIT license.
+See the LICENSE file for more info.
+
 ## Legal
 
 Apple Weather and Weather are trademarks of Apple Inc.
 This project is not affiliated with, endorsed, or sponsored by Apple Inc.
-
-## License
-
-This project is licensed under the Apache License, Version 2.0.
 
 [schema.org]: https://schema.org
 [json-ld]: https://json-ld.org
