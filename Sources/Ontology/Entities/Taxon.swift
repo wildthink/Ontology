@@ -1,0 +1,81 @@
+//
+//  Taxon.swift
+//  Ontology
+//
+//  Created by Jason Jobe on 4/23/26.
+//
+
+public struct Taxon: Identifiable,
+                     Sendable, Hashable, Equatable
+{
+    public typealias Representation = Char10
+    
+    public var id: Int { hashValue }
+    public let representation: Representation
+    
+    public init(_ str: Representation) {
+        self.representation = str
+    }
+}
+
+public extension Taxon {
+    static let anything: Taxon = "any"
+    static let agent: Taxon = "agent"
+    static let person: Taxon = "person"
+    static let org: Taxon = "org"
+    
+    static let place: Taxon = "place"
+
+    static let event: Taxon = "event"
+    static let topic: Taxon = "topic"
+}
+
+extension Taxon: Codable {
+   public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self.representation = Word64(stringLiteral: value)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.representation)
+    }
+}
+
+extension Taxon: CustomStringConvertible {
+    public init(stringLiteral value: String) {
+        self.representation = Word64(stringLiteral: value)
+    }
+}
+
+extension Taxon: ExpressibleByStringLiteral {
+    public var description: String {
+        representation.description
+    }
+}
+
+// MARK: Core Types Names
+public typealias CoreType = Char10
+public extension CoreType {
+    static let text: CoreType = "text"
+    static let data: CoreType = "data"
+    static let json: CoreType = "json"
+    static let ecs:  CoreType = "ecs"
+}
+
+public typealias SubType = Char10
+public extension SubType {
+    static let ical: CoreType = "iCal"
+    static let jcal: CoreType = "jCal"
+    
+    /// Google Calendar JSON/
+    static let gcal: CoreType = "gCal"
+}
+
+// MARK: TaxonInfo - Schema.org
+/// We store the Taxon details seperately to avoid the overhead
+/// of embedding the "metadata" in the `taxon` properties of
+/// entities.
+///
+
