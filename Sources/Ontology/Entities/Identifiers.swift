@@ -26,7 +26,7 @@ extension EntityReference {
 }
 
 // MARK: Schema.org Entities
-protocol SchemaEntityReference: EntityReference {
+public protocol SchemaEntityReference: EntityReference {
     static var taxon: Taxon { get }
     var identifier: String? { get }
 }
@@ -39,16 +39,15 @@ extension SchemaEntityReference {
 }
 
 extension Person: SchemaEntityReference {
-    static var taxon: Taxon { .person }
+    public static var taxon: Taxon { .person }
 }
 extension Organization: SchemaEntityReference {
-    static var taxon: Taxon { .org }
+    public static var taxon: Taxon { .org }
 }
 extension Place: SchemaEntityReference {
-    static var taxon: Taxon { .person }
+    public static var taxon: Taxon { .person }
 }
 
 extension Event: SchemaEntityReference {
-    static var taxon: Taxon { .event }
+    public static var taxon: Taxon { .event }
 }
-
