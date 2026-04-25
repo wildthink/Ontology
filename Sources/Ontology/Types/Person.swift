@@ -65,6 +65,15 @@ public struct Person: Hashable, Sendable {
     }
 }
 
+public extension Person {
+    var personName: PersonNameComponents {
+        PersonNameComponents(
+            givenName: self.givenName,
+            familyName: self.familyName
+        )
+    }
+}
+
 #if canImport(Contacts)
     import Contacts
 

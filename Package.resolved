@@ -1,0 +1,15 @@
+{
+  "originHash" : "cda96a5cb97badfb0944e51eebf208340cf9bd7aee6adfb50ca3128913bb1119",
+  "pins" : [
+    {
+      "identity" : "period",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/davdroman/Period.git",
+      "state" : {
+        "revision" : "814bc0fce41a273b6fe1cf8966f7d23e77d60d7c",
+        "version" : "1.1.0"
+      }
+    }
+  ],
+  "version" : 3
+}

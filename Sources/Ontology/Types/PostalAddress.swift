@@ -14,6 +14,20 @@ public struct PostalAddress: Hashable, Sendable {
 
     /// The country
     public var addressCountry: String?
+
+    public init(
+        streetAddress: String? = nil,
+        addressLocality: String? = nil,
+        addressRegion: String? = nil,
+        postalCode: String? = nil,
+        addressCountry: String? = nil
+    ) {
+        self.streetAddress = streetAddress
+        self.addressLocality = addressLocality
+        self.addressRegion = addressRegion
+        self.postalCode = postalCode
+        self.addressCountry = addressCountry
+    }
 }
 
 #if canImport(Contacts)
