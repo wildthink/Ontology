@@ -1,5 +1,5 @@
 {
-  "originHash" : "cda96a5cb97badfb0944e51eebf208340cf9bd7aee6adfb50ca3128913bb1119",
+  "originHash" : "e418e4fe86b2a65b208c1683b1d1efa26f152f9227df46a59a56768e3d6d0763",
   "pins" : [
     {
       "identity" : "period",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "814bc0fce41a273b6fe1cf8966f7d23e77d60d7c",
         "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-yyjson",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mattt/swift-yyjson.git",
+      "state" : {
+        "revision" : "6514373242de8a0765556dc54efdfd8a9567d71a",
+        "version" : "0.5.0"
       }
     }
   ],

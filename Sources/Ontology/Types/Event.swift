@@ -3,6 +3,23 @@ import Foundation
 /// An Event model following Schema.org ontology (https://schema.org/Event),
 /// with a few pragmatic extensions for app-specific interoperability.
 public struct Event: Hashable, Sendable {
+    /// Minimal calendar identity for event provenance and filtering.
+    public struct Calendar: Hashable, Sendable, Codable {
+        public var identifier: String?
+        public var title: String?
+        public var sourceURL: URL?
+
+        public init(
+            identifier: String? = nil,
+            title: String? = nil,
+            sourceURL: URL? = nil
+        ) {
+            self.identifier = identifier
+            self.title = title
+            self.sourceURL = sourceURL
+        }
+    }
+
     /// Unique identifier for the event
     public var identifier: String?
 
@@ -13,7 +30,7 @@ public struct Event: Hashable, Sendable {
     public var description: String?
 
     /// The calendar this event belongs to
-    public var calendar: String?
+    public var calendar: Calendar?
 
     /// Start date and time of the event in ISO 8601 format
     public var startDate: DateTime?
@@ -43,7 +60,7 @@ public struct Event: Hashable, Sendable {
         identifier: String? = nil,
         name: String? = nil,
         description: String? = nil,
-        calendar: String? = nil,
+        calendar: Calendar? = nil,
         startDate: DateTime? = nil,
         endDate: DateTime? = nil,
         location: String? = nil,
@@ -124,7 +141,10 @@ public extension Event {
             self.identifier = event.calendarItemIdentifier
             self.name = event.title
             self.description = event.notes
-            self.calendar = event.calendar.title
+            self.calendar = Calendar(
+                identifier: event.calendar.calendarIdentifier,
+                title: event.calendar.title
+            )
             self.startDate = DateTime(event.startDate, timeZone: event.timeZone)
             self.endDate = DateTime(event.endDate, timeZone: event.timeZone)
             self.location = event.location ?? event.structuredLocation?.title
@@ -270,7 +290,13 @@ extension Event: Codable {
         // Decode properties
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        calendar = try container.decodeIfPresent(String.self, forKey: .attribute(.calendar))
+        if let decodedCalendar = try container.decodeIfPresent(Calendar.self, forKey: .attribute(.calendar)) {
+            calendar = decodedCalendar
+        } else if let legacyCalendarTitle = try container.decodeIfPresent(String.self, forKey: .attribute(.calendar)) {
+            calendar = Calendar(title: legacyCalendarTitle)
+        } else {
+            calendar = nil
+        }
         startDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.startDate))
         endDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.endDate))
         location = try container.decodeIfPresent(String.self, forKey: .attribute(.location))

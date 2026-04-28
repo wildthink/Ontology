@@ -9,6 +9,12 @@ public struct DateTime: Hashable, Sendable {
         self.timeZone = timeZone
     }
 
+    public init?(_ value: Date?, timeZone: TimeZone? = nil) {
+        guard let value else { return nil }
+        self.value = value
+        self.timeZone = timeZone
+    }
+
     public init?(string: String) {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
