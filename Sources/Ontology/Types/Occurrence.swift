@@ -49,6 +49,21 @@ public struct Occurrence: Hashable, Sendable {
     }
 }
 
+extension Occurrence {
+    /// Normalise a raw event-status string to Schema.org EventStatus vocabulary.
+    public static func normalizedStatus(_ value: String?) -> String? {
+        guard let value, !value.isEmpty else { return nil }
+        switch value.lowercased() {
+        case "confirmed", "scheduled", "eventscheduled":  return "EventScheduled"
+        case "cancelled", "canceled", "eventcancelled":   return "EventCancelled"
+        case "postponed", "eventpostponed":               return "EventPostponed"
+        case "rescheduled", "eventrescheduled":           return "EventRescheduled"
+        case "movedonline", "eventmovedonline":           return "EventMovedOnline"
+        default: return value
+        }
+    }
+}
+
 extension Occurrence: Codable {
     private enum CodingKeys: String, CodingKey {
         case name, description, startDate, endDate

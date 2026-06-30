@@ -19,5 +19,29 @@ extension Plan {
             url: reminder.url
         )
     }
+
+    @discardableResult
+    public func apply(to reminder: EKReminder) -> Bool {
+        reminder.title = name ?? reminder.title
+        reminder.notes = description
+        reminder.url = url
+        if let startDate {
+            let tz = startDate.timeZone ?? .current
+            reminder.dueDateComponents = Calendar.current.dateComponents(
+                in: tz, from: startDate.value
+            )
+        }
+        return true
+    }
+
+    public func makeEKReminder(
+        in store: EKEventStore,
+        list: EKCalendar? = nil
+    ) -> EKReminder {
+        let reminder = EKReminder(eventStore: store)
+        reminder.calendar = list ?? store.defaultCalendarForNewReminders()
+        apply(to: reminder)
+        return reminder
+    }
 }
 #endif

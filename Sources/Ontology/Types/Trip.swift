@@ -1,7 +1,10 @@
 import Foundation
 
-/// Represents a trip or journey, corresponding to Schema.org's Trip type (https://schema.org/Trip).
-/// An itinerary of visits to one or more places.
+/// Represents a trip or journey (Schema.org/Trip).
+///
+/// - Important: Model trips as a `Plan` with a sequence of `Place` members in a `Collection`.
+/// `Trip` remains for migration only.
+@available(*, deprecated)
 public struct Trip: Hashable, Sendable {
     /// Unique identifier for the trip.
     public var identifier: String?

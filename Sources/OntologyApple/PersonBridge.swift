@@ -77,5 +77,23 @@ extension Person {
         self.parents = parents.isEmpty ? nil : parents
         self.relatedTo = others.isEmpty ? nil : others
     }
+
+    public func makeCNContact() -> CNMutableContact {
+        let contact = CNMutableContact()
+        contact.givenName = givenName ?? ""
+        contact.familyName = familyName ?? ""
+        contact.jobTitle = jobTitle ?? ""
+        contact.organizationName = worksFor?.name ?? ""
+        contact.emailAddresses = (email ?? []).map {
+            CNLabeledValue(label: CNLabelWork, value: $0 as NSString)
+        }
+        contact.phoneNumbers = (telephone ?? []).map {
+            CNLabeledValue(label: CNLabelPhoneNumberMobile, value: CNPhoneNumber(stringValue: $0))
+        }
+        contact.urlAddresses = (url ?? []).map {
+            CNLabeledValue(label: CNLabelWork, value: $0 as NSString)
+        }
+        return contact
+    }
 }
 #endif
