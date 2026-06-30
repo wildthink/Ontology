@@ -6,6 +6,9 @@ import Ontology
 
 extension Occurrence {
     public init(_ ekEvent: EKEvent) {
+        var handles = [Handle(kind: Handle.Kind.appleCalendarItem, value: ekEvent.calendarItemIdentifier)]
+        handles.append(Handle(kind: Handle.Kind.appleCalendarItemExt,
+                              value: ekEvent.calendarItemExternalIdentifier))
         self.init(
             identifier: ekEvent.calendarItemIdentifier,
             name: ekEvent.title,
@@ -16,7 +19,9 @@ extension Occurrence {
             url: ekEvent.url,
             organizer: ekEvent.organizer.flatMap(Person.init(_:)),
             attendees: ekEvent.attendees?.compactMap(Person.init(_:)),
-            status: Self.normalizedEventStatus(Self.ekStatus(from: ekEvent.status))
+            status: Self.normalizedEventStatus(Self.ekStatus(from: ekEvent.status)),
+            alarms: ekEvent.alarms?.map(Alarm.init(_:)),
+            handles: handles
         )
     }
 
@@ -30,6 +35,7 @@ extension Occurrence {
         event.location = location ?? place?.name
         event.url = url
         event.timeZone = startDate?.timeZone ?? endDate?.timeZone
+        event.alarms = alarms?.map { $0.ekAlarm() }
         return true
     }
 

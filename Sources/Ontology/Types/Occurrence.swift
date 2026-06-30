@@ -19,6 +19,10 @@ public struct Occurrence: Hashable, Sendable {
     public var status: String?
     /// Back-reference to the Plan that generated this occurrence, if any.
     public var plan: HolonRef?
+    /// Alarms attached to this occurrence. These prompt attendees but do not gate plan completion.
+    public var alarms: [Alarm]?
+    /// External and proxy identifiers for cross-system matching.
+    public var handles: [Handle]?
 
     public init(
         identifier: String? = nil,
@@ -32,7 +36,9 @@ public struct Occurrence: Hashable, Sendable {
         organizer: Person? = nil,
         attendees: [Person]? = nil,
         status: String? = nil,
-        plan: HolonRef? = nil
+        plan: HolonRef? = nil,
+        alarms: [Alarm]? = nil,
+        handles: [Handle]? = nil
     ) {
         self.identifier = identifier
         self.name = name
@@ -46,6 +52,8 @@ public struct Occurrence: Hashable, Sendable {
         self.attendees = attendees
         self.status = status
         self.plan = plan
+        self.alarms = alarms
+        self.handles = handles
     }
 }
 
@@ -67,7 +75,7 @@ extension Occurrence {
 extension Occurrence: Codable {
     private enum CodingKeys: String, CodingKey {
         case name, description, startDate, endDate
-        case place, location, url, organizer, attendees = "attendee", status = "eventStatus", plan
+        case place, location, url, organizer, attendees = "attendee", status = "eventStatus", plan, alarms, handles
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -88,6 +96,8 @@ extension Occurrence: Codable {
         try container.encodeIfPresent(attendees, forKey: .attribute(.attendees))
         try container.encodeIfPresent(status, forKey: .attribute(.status))
         try container.encodeIfPresent(plan, forKey: .attribute(.plan))
+        try container.encodeIfPresent(alarms, forKey: .attribute(.alarms))
+        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
     }
 
     public init(from decoder: Decoder) throws {
@@ -106,5 +116,7 @@ extension Occurrence: Codable {
         attendees = try container.decodeIfPresent([Person].self, forKey: .attribute(.attendees))
         status = try container.decodeIfPresent(String.self, forKey: .attribute(.status))
         plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
+        alarms = try container.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
+        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
     }
 }

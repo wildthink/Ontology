@@ -20,11 +20,11 @@ public struct GCalEvent: Codable, Sendable {
     public var recurrence: [String]?
     /// Set on instances of a recurring series; points to the master event id.
     public var recurringEventId: String?
+    /// Popup and email reminders for this event.
+    public var reminders: Reminders?
 
     public struct EventDateTime: Codable, Sendable {
-        /// ISO 8601 date-time (timed events).
         public var dateTime: String?
-        /// ISO 8601 date only, YYYY-MM-DD (all-day events).
         public var date: String?
         public var timeZone: String?
 
@@ -43,6 +43,27 @@ public struct GCalEvent: Codable, Sendable {
         }
     }
 
+    /// Google Calendar reminder override block.
+    public struct Reminders: Codable, Sendable {
+        public var useDefault: Bool?
+        public var overrides: [Override]?
+
+        public struct Override: Codable, Sendable {
+            /// "popup" | "email"
+            public var method: String?
+            /// Minutes before the event start.
+            public var minutes: Int?
+
+            public init(method: String? = nil, minutes: Int? = nil) {
+                self.method = method; self.minutes = minutes
+            }
+        }
+
+        public init(useDefault: Bool? = nil, overrides: [Override]? = nil) {
+            self.useDefault = useDefault; self.overrides = overrides
+        }
+    }
+
     public init(
         id: String? = nil,
         summary: String? = nil,
@@ -55,13 +76,14 @@ public struct GCalEvent: Codable, Sendable {
         organizer: Participant? = nil,
         attendees: [Participant]? = nil,
         recurrence: [String]? = nil,
-        recurringEventId: String? = nil
+        recurringEventId: String? = nil,
+        reminders: Reminders? = nil
     ) {
         self.id = id; self.summary = summary; self.description = description
         self.location = location; self.status = status; self.htmlLink = htmlLink
         self.start = start; self.end = end; self.organizer = organizer
         self.attendees = attendees; self.recurrence = recurrence
-        self.recurringEventId = recurringEventId
+        self.recurringEventId = recurringEventId; self.reminders = reminders
     }
 }
 
@@ -79,8 +101,9 @@ extension GCalEvent {
             if case .entity(_, let id) = $0 { return id }
             return nil
         }
+        let calID = occurrence.handles?.value(for: Handle.Kind.googleCalendar) ?? occurrence.identifier
         self.init(
-            id: occurrence.identifier,
+            id: calID,
             summary: occurrence.name,
             description: occurrence.description,
             location: occurrence.location ?? occurrence.place?.name,
@@ -90,21 +113,24 @@ extension GCalEvent {
             end: occurrence.endDate.map { EventDateTime($0) },
             organizer: occurrence.organizer.flatMap { Participant($0) },
             attendees: occurrence.attendees?.compactMap { Participant($0) },
-            recurringEventId: planID
+            recurringEventId: planID,
+            reminders: occurrence.alarms.map { Reminders(alarms: $0) }
         )
     }
 
     /// Create a GCalEvent body from a `Plan` (for insert / update of a recurring master).
     public init(_ plan: Plan) {
         let rrule = plan.rrule.map { "RRULE:\($0)" }
+        let calID = plan.handles?.value(for: Handle.Kind.googleCalendar) ?? plan.identifier
         self.init(
-            id: plan.identifier,
+            id: calID,
             summary: plan.name,
             description: plan.description,
             htmlLink: plan.url?.absoluteString,
             start: plan.startDate.map { EventDateTime($0) },
             end: plan.endDate.map { EventDateTime($0) },
-            recurrence: rrule.map { [$0] }
+            recurrence: rrule.map { [$0] },
+            reminders: plan.alarms.map { Reminders(alarms: $0) }
         )
     }
 
@@ -125,6 +151,7 @@ extension GCalEvent {
 extension Occurrence {
     public init(_ gcal: GCalEvent) {
         let planRef: HolonRef? = gcal.recurringEventId.map { .entity(.plan, $0) }
+        let handles: [Handle]? = gcal.id.map { [Handle(kind: Handle.Kind.googleCalendar, value: $0)] }
         self.init(
             identifier: gcal.id,
             name: gcal.summary,
@@ -136,7 +163,9 @@ extension Occurrence {
             organizer: gcal.organizer.flatMap { Person(googleParticipant: $0) },
             attendees: gcal.attendees?.compactMap { Person(googleParticipant: $0) },
             status: Occurrence.normalizedStatus(gcal.status),
-            plan: planRef
+            plan: planRef,
+            alarms: gcal.reminders?.overrides?.map { Alarm(googleReminder: $0) },
+            handles: handles
         )
     }
 }
@@ -148,6 +177,7 @@ extension Plan {
         let rrule = gcal.recurrence?
             .first(where: { $0.hasPrefix("RRULE:") })
             .map { String($0.dropFirst(6)) }
+        let handles: [Handle]? = gcal.id.map { [Handle(kind: Handle.Kind.googleCalendar, value: $0)] }
         self.init(
             identifier: gcal.id,
             name: gcal.summary,
@@ -155,7 +185,9 @@ extension Plan {
             startDate: gcal.start.flatMap { DateTime(googleDateTime: $0) },
             endDate: gcal.end.flatMap { DateTime(googleDateTime: $0) },
             url: gcal.htmlLink.flatMap { URL(string: $0) },
-            rrule: rrule
+            rrule: rrule,
+            alarms: gcal.reminders?.overrides?.map { Alarm(googleReminder: $0) },
+            handles: handles
         )
     }
 }
@@ -173,6 +205,35 @@ extension GCalEvent.Participant {
         guard let email = person.email?.first else { return nil }
         let name = [person.givenName, person.familyName].compactMap { $0 }.joined(separator: " ")
         self.init(email: email, displayName: name.isEmpty ? nil : name)
+    }
+}
+
+extension GCalEvent.Reminders {
+    init(alarms: [Alarm]) {
+        self.init(
+            useDefault: false,
+            overrides: alarms.map { GCalEvent.Reminders.Override($0) }
+        )
+    }
+}
+
+extension GCalEvent.Reminders.Override {
+    public init(_ alarm: Alarm) {
+        switch alarm.trigger {
+        case .offsetMinutes(let n):
+            let method = alarm.method == "email" ? "email" : "popup"
+            self.init(method: method, minutes: abs(n))
+        case .absoluteDate:
+            // Google Calendar API does not support absolute-date reminders; fall back to 15 min.
+            self.init(method: alarm.method == "email" ? "email" : "popup", minutes: 15)
+        }
+    }
+}
+
+extension Alarm {
+    public init(googleReminder r: GCalEvent.Reminders.Override) {
+        let method = r.method == "popup" ? "display" : (r.method ?? "display")
+        self.init(trigger: .offsetMinutes(-(r.minutes ?? 15)), method: method)
     }
 }
 

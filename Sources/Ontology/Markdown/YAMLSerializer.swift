@@ -29,7 +29,29 @@ public enum YAMLSerializer {
         if allScalar {
             return "[" + arr.map { serialize($0) }.joined(separator: ", ") + "]"
         }
-        return "\n" + arr.map { "\(pad)- \(serialize($0, indent: indent + 1))" }.joined(separator: "\n")
+        let innerPad = pad + "  "
+        return "\n" + arr.map { element in
+            guard let obj = element.object else {
+                return "\(pad)- \(serialize(element, indent: indent + 1))"
+            }
+            // Object item: first key goes on the same line as "- "; rest align under it.
+            let keys = obj.keys.sorted().filter { !(obj[$0]?.isNull ?? true) }
+            guard !keys.isEmpty else { return "\(pad)- {}" }
+            var lines: [String] = []
+            for (i, key) in keys.enumerated() {
+                guard let value = obj[key], !value.isNull else { continue }
+                let pfx = i == 0 ? "\(pad)- " : innerPad
+                if value.object != nil {
+                    lines.append("\(pfx)\(key):")
+                    lines.append(object(value.object!, pad: innerPad + "  ", indent: indent + 1, priority: []))
+                } else if let sub = value.array, sub.first?.object != nil {
+                    lines.append("\(pfx)\(key): \(array(sub, pad: innerPad + "  ", indent: indent + 1))")
+                } else {
+                    lines.append("\(pfx)\(key): \(serialize(value))")
+                }
+            }
+            return lines.joined(separator: "\n")
+        }.joined(separator: "\n")
     }
 
     static func object(_ obj: [String: JSON], pad: String, indent: Int, priority: [String]) -> String {

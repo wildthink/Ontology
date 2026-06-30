@@ -2,11 +2,14 @@
 import EventKit
 import Ontology
 
-extension Plan {
-    /// Create a Plan from an EKReminder.
+// MARK: - Task ↔ EKReminder
+
+extension Task {
+    /// Create a Task from an EKReminder.
     ///
-    /// `dueDate` is populated from `dueDateComponents`; `startDate` is left nil (use a
-    /// ScheduleItem Occurrence for time-blocked work). Associated alarms are bridged.
+    /// Mapping: title → name, notes → description, dueDateComponents → dueDate,
+    /// isCompleted → .done | .open, alarms → alarms.
+    /// The `plan` back-reference is not set here — wire it at call site if known.
     public init(_ reminder: EKReminder) {
         let due = reminder.dueDateComponents
             .flatMap { Calendar.current.date(from: $0) }
@@ -16,22 +19,20 @@ extension Plan {
             name: reminder.title,
             description: reminder.notes,
             dueDate: due,
-            url: reminder.url,
+            status: reminder.isCompleted ? .done : .open,
             alarms: reminder.alarms?.map(Alarm.init(_:))
         )
     }
 
-    /// Write plan fields onto an existing EKReminder.
-    /// Returns false if there is nothing meaningful to write (no name).
+    /// Write task fields onto an existing EKReminder.
     @discardableResult
     public func apply(to reminder: EKReminder) -> Bool {
         reminder.title = name ?? reminder.title
         reminder.notes = description
-        reminder.url = url
-        let effectiveDue = dueDate ?? startDate
-        if let effectiveDue {
-            let tz = effectiveDue.timeZone ?? .current
-            reminder.dueDateComponents = Calendar.current.dateComponents(in: tz, from: effectiveDue.value)
+        reminder.isCompleted = status == .done
+        if let dueDate {
+            let tz = dueDate.timeZone ?? .current
+            reminder.dueDateComponents = Calendar.current.dateComponents(in: tz, from: dueDate.value)
         }
         reminder.alarms = alarms?.map { $0.ekAlarm() }
         return true

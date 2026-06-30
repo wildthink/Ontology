@@ -34,7 +34,10 @@ public struct Person: Hashable, Sendable {
     
     /// Social profile URLs for the person
     public var sameAs: [String]?
-    
+
+    /// External and proxy identifiers for cross-system matching.
+    public var handles: [Handle]?
+
     /// Contact points (e.g. instant messaging)
     public var contactPoint: [ContactPoint]?
     
@@ -60,6 +63,7 @@ public struct Person: Hashable, Sendable {
         url: [String]? = nil,
         birthDate: String? = nil,
         sameAs: [String]? = nil,
+        handles: [Handle]? = nil,
         contactPoint: [ContactPoint]? = nil,
         knowsLanguage: [String]? = nil,
         spouse: [Person]? = nil,
@@ -79,6 +83,7 @@ public struct Person: Hashable, Sendable {
         self.url = url
         self.birthDate = birthDate
         self.sameAs = sameAs
+        self.handles = handles
         self.contactPoint = contactPoint
         self.knowsLanguage = knowsLanguage
         self.spouse = spouse
@@ -118,7 +123,7 @@ public extension Person {
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
         case givenName, familyName, email, telephone, address
-        case jobTitle, worksFor, url, birthDate, sameAs
+        case jobTitle, worksFor, url, birthDate, sameAs, handles
         case contactPoint, knowsLanguage, preferences
         case spouse, children, siblings, parents, relatedTo
     }
@@ -148,6 +153,7 @@ extension Person: Codable {
         try container.encodeIfPresent(url, forKey: .attribute(.url))
         try container.encodeIfPresent(birthDate, forKey: .attribute(.birthDate))
         try container.encodeIfPresent(sameAs, forKey: .attribute(.sameAs))
+        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
         try container.encodeIfPresent(contactPoint, forKey: .attribute(.contactPoint))
         try container.encodeIfPresent(knowsLanguage, forKey: .attribute(.knowsLanguage))
         try container.encodeIfPresent(spouse, forKey: .attribute(.spouse))
@@ -184,6 +190,7 @@ extension Person: Codable {
         url = try container.decodeIfPresent([String].self, forKey: .attribute(.url))
         birthDate = try container.decodeIfPresent(String.self, forKey: .attribute(.birthDate))
         sameAs = try container.decodeIfPresent([String].self, forKey: .attribute(.sameAs))
+        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
         contactPoint = try container.decodeIfPresent(
             [ContactPoint].self, forKey: .attribute(.contactPoint))
         knowsLanguage = try container.decodeIfPresent(

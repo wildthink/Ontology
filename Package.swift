@@ -1,4 +1,4 @@
-// swift-tools-version: 6.3
+// swift-tools-version: 6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -27,7 +27,7 @@ let package = Package(
         .package(url: "https://github.com/davdroman/Period.git", from: "1.1.0"),
 //        .package(url: "https://github.com/apple/swift-log", from: "1.10.1"),
         .package(url: "https://github.com/mattt/swift-yyjson.git", from: "0.5.0"),
-        .package(url: "https://github.com/marcprux/universal.git", branch: "main"),
+        .package(url: "https://github.com/marcprux/universal.git", from: "6.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.

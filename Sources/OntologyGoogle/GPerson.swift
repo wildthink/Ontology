@@ -107,8 +107,10 @@ extension GPerson {
         let orgEntry: OrgEntry? = (person.worksFor?.name != nil || person.jobTitle != nil)
             ? OrgEntry(name: person.worksFor?.name, title: person.jobTitle)
             : nil
+        // Prefer the stored Google resource name handle over the canonical identifier
+        let resourceName = person.handles?.value(for: Handle.Kind.googlePeople) ?? person.identifier
         self.init(
-            resourceName: person.identifier,
+            resourceName: resourceName,
             names: nameEntry.map { [$0] },
             emailAddresses: person.email?.map { ValueEntry(value: $0) },
             phoneNumbers: person.telephone?.map { ValueEntry(value: $0) },
@@ -133,6 +135,9 @@ extension Person {
         jobTitle = g.organizations?.first?.title
         worksFor = g.organizations?.first?.name.map { Organization(name: $0) }
         url = g.urls?.compactMap(\.value)
+        if let rn = g.resourceName {
+            handles = [Handle(kind: Handle.Kind.googlePeople, value: rn)]
+        }
     }
 }
 

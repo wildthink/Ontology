@@ -35,6 +35,7 @@ extension Person {
             url: contact.urlAddresses.isEmpty ? nil : contact.urlAddresses.map { $0.value as String },
             birthDate: birthDate,
             sameAs: contact.socialProfiles.isEmpty ? nil : contact.socialProfiles.map { $0.value.urlString },
+            handles: [Handle(kind: Handle.Kind.appleContacts, value: contact.identifier)],
             contactPoint: contactPoint
         )
 

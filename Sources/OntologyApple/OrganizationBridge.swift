@@ -12,7 +12,7 @@ extension Organization {
             email: contact.emailAddresses.isEmpty ? nil : contact.emailAddresses.map { $0.value as String },
             telephone: contact.phoneNumbers.isEmpty ? nil : contact.phoneNumbers.map { $0.value.stringValue },
             url: contact.urlAddresses.isEmpty ? nil : contact.urlAddresses.map { $0.value as String },
-            metadata: ["apple.identifier": contact.identifier]
+            handles: [Handle(kind: Handle.Kind.appleContacts, value: contact.identifier)]
         )
     }
 }

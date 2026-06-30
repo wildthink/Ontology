@@ -67,6 +67,16 @@ extension Collection: SchemaEntityReference {
 }
 extension Collection: Entity {}
 
+extension Task: SchemaEntityReference {
+    public static var taxon: Taxon { .task }
+}
+extension Task: Entity {}
+
+extension Commitment: SchemaEntityReference {
+    public static var taxon: Taxon { .commitment }
+}
+extension Commitment: Entity {}
+
 // MARK: - Deprecated type conformances
 
 @available(*, deprecated, renamed: "Occurrence")

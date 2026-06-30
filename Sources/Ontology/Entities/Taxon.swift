@@ -33,6 +33,8 @@ public extension Taxon {
     static let occurrence: Taxon = "occurrence"
     static let record: Taxon = "record"
     static let collection: Taxon = "collection"
+    static let task: Taxon = "task"
+    static let commitment: Taxon = "commitment"
 }
 
 extension Taxon: Codable {
