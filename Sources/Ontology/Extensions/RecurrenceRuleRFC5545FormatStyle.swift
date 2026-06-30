@@ -113,7 +113,7 @@ extension RecurrenceRuleRFC5545FormatStyle: FormatStyle {
     }
 
     // Helper to append a collection of bytes
-    func append(_ bytes: some Collection<UInt8>) {
+    func append(_ bytes: some Swift.Collection<UInt8>) {
       ensureCapacity(index + bytes.count)
       for byte in bytes {
         append(byte)
@@ -152,7 +152,7 @@ extension RecurrenceRuleRFC5545FormatStyle: FormatStyle {
     }
 
     // Helper to append a collection of integers
-    func append(_ values: some Collection<Int>) {
+    func append(_ values: some Swift.Collection<Int>) {
       for (index, value) in values.enumerated() {
         if index > 0 {
           append(UInt8(ascii: ","))
@@ -216,7 +216,7 @@ extension RecurrenceRuleRFC5545FormatStyle: FormatStyle {
     }
 
     // Helper to append a collection of `RecurrenceRule.Weekday` objects
-    func append(_ weekdays: some Collection<RecurrenceRule.Weekday>) {
+    func append(_ weekdays: some Swift.Collection<RecurrenceRule.Weekday>) {
       for (index, weekday) in weekdays.enumerated() {
         if index > 0 {
           append(UInt8(ascii: ","))
@@ -234,7 +234,7 @@ extension RecurrenceRuleRFC5545FormatStyle: FormatStyle {
     }
 
     // Helper to append a collection of `RecurrenceRule.Month` objects
-    func append(_ months: some Collection<RecurrenceRule.Month>) {
+    func append(_ months: some Swift.Collection<RecurrenceRule.Month>) {
       for (index, month) in months.enumerated() {
         if index > 0 {
           append(UInt8(ascii: ","))

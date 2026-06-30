@@ -1,7 +1,9 @@
 import Foundation
 
-/// An Event model following Schema.org ontology (https://schema.org/Event),
-/// with a few pragmatic extensions for app-specific interoperability.
+/// An Event model following Schema.org ontology (https://schema.org/Event).
+///
+/// - Important: Use `Occurrence` for new code. `Event` remains for migration only.
+@available(*, deprecated, renamed: "Occurrence")
 public struct Event: Hashable, Sendable {
     /// Minimal calendar identity for event provenance and filtering.
     public struct Calendar: Hashable, Sendable, Codable {

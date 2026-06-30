@@ -1,10 +1,3 @@
-//
-//  Identifiers.swift
-//  Ontology
-//
-//  Created by Jason Jobe on 4/23/26.
-//
-
 import Foundation
 
 public protocol EntityReference: Holon, Hashable, Codable {
@@ -17,26 +10,27 @@ extension EntityReference {
     public static func randomID() -> EID {
         UUID().uuidString
     }
-    
+
     public static func shortID(taxon: Taxon = .anything) -> EID {
         let str = UUID().uuidString
-        let short = str.dropFirst(str.count-8).description
+        let short = str.dropFirst(str.count - 8).description
         return "\(taxon.description).\(short)"
     }
 }
 
-// MARK: Schema.org Entities
+// MARK: - Schema.org entity identity
+
 public protocol SchemaEntityReference: EntityReference {
     static var taxon: Taxon { get }
     var identifier: String? { get }
 }
 
 extension SchemaEntityReference {
-    public var id: String {
-        identifier ?? taxon.description
-    }
+    public var id: String { identifier ?? taxon.description }
     public var taxon: Taxon { Self.taxon }
 }
+
+// MARK: - Hub type conformances
 
 extension Person: SchemaEntityReference {
     public static var taxon: Taxon { .person }
@@ -53,7 +47,31 @@ extension Place: SchemaEntityReference {
 }
 extension Place: Entity {}
 
+extension Plan: SchemaEntityReference {
+    public static var taxon: Taxon { .plan }
+}
+extension Plan: Entity {}
+
+extension Occurrence: SchemaEntityReference {
+    public static var taxon: Taxon { .occurrence }
+}
+extension Occurrence: Entity {}
+
+extension Record: SchemaEntityReference {
+    public static var taxon: Taxon { .record }
+}
+extension Record: Entity {}
+
+extension Collection: SchemaEntityReference {
+    public static var taxon: Taxon { .collection }
+}
+extension Collection: Entity {}
+
+// MARK: - Deprecated type conformances
+
+@available(*, deprecated, renamed: "Occurrence")
 extension Event: SchemaEntityReference {
     public static var taxon: Taxon { .event }
 }
+@available(*, deprecated, renamed: "Occurrence")
 extension Event: Entity {}

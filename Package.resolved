@@ -1,5 +1,5 @@
 {
-  "originHash" : "e418e4fe86b2a65b208c1683b1d1efa26f152f9227df46a59a56768e3d6d0763",
+  "originHash" : "f63f7bbd59014defabf1cdac8afbd9a2cdae752955cbbf3a7b650a6c3fa7c6ea",
   "pins" : [
     {
       "identity" : "period",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "6514373242de8a0765556dc54efdfd8a9567d71a",
         "version" : "0.5.0"
+      }
+    },
+    {
+      "identity" : "universal",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/marcprux/universal.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "fa8f84b2d8f452ce152578bb3860f21d287433b4"
       }
     }
   ],

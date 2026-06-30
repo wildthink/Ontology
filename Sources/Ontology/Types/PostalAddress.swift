@@ -57,15 +57,16 @@ extension PostalAddress: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        // Verify type is correct
-        let describedType = String(describing: Self.self)
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == describedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
+        // Validate @type when present (absent in frontmatter contexts)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type) {
+            let describedType = String(describing: Self.self)
+            guard decodedType == describedType else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+                )
+            }
         }
 
         // Decode properties

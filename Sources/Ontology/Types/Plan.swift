@@ -34,10 +34,6 @@ public struct Plan: Hashable, Sendable {
     }
 }
 
-extension Plan: SchemaEntityReference {
-    public static var taxon: Taxon { .plan }
-}
-
 extension Plan: Codable {
     private enum CodingKeys: String, CodingKey {
         case name, description, startDate, endDate, location, rrule, tags
@@ -72,4 +68,3 @@ extension Plan: Codable {
     }
 }
 
-extension Plan: Entity {}

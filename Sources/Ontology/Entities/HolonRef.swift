@@ -20,7 +20,7 @@ public extension HolonRef {
     /// The wikilink-style string representation: `[[taxon.id]]` or `[[./path]]`.
     var wikilink: String {
         switch self {
-        case .entity(let taxon, let id): "[[  \(taxon).\(id)]]"
+        case .entity(let taxon, let id): "[[\(taxon).\(id)]]"
         case .path(let p):              "[[\(p)]]"
         }
     }

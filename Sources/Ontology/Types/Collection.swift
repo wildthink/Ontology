@@ -1,36 +1,43 @@
 import Foundation
 
-/// A documented outcome: records what actually happened for a Plan or Occurrence.
-public struct Record: Hashable, Sendable {
+/// A logical grouping of Holons, independent of directory layout.
+///
+/// Persisted as `_index.md` files. The `members` list declares logical
+/// membership via `HolonRef` values — a `Person` in `people/jane.md` can
+/// belong to a campaign arc's collection without moving the file.
+///
+/// ```markdown
+/// ---
+/// taxon: collection
+/// id: collection.arc1
+/// name: The Dragon Arc
+/// ---
+///
+/// First arc of the Evermore campaign.
+/// ```
+public struct Collection: Hashable, Sendable {
     public var identifier: String?
     public var name: String?
     public var description: String?
-    /// The Plan or Occurrence this record documents.
-    public var subject: HolonRef?
-    /// Narrative of what actually happened.
-    public var outcome: String?
-    public var recordedAt: DateTime?
+    /// The holons that belong to this collection.
+    public var members: [HolonRef]
 
     public init(
         identifier: String? = nil,
         name: String? = nil,
         description: String? = nil,
-        subject: HolonRef? = nil,
-        outcome: String? = nil,
-        recordedAt: DateTime? = nil
+        members: [HolonRef] = []
     ) {
         self.identifier = identifier
         self.name = name
         self.description = description
-        self.subject = subject
-        self.outcome = outcome
-        self.recordedAt = recordedAt
+        self.members = members
     }
 }
 
-extension Record: Codable {
+extension Collection: Codable {
     private enum CodingKeys: String, CodingKey {
-        case name, description, subject, outcome, recordedAt
+        case name, description, members
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -42,9 +49,9 @@ extension Record: Codable {
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(subject, forKey: .attribute(.subject))
-        try container.encodeIfPresent(outcome, forKey: .attribute(.outcome))
-        try container.encodeIfPresent(recordedAt, forKey: .attribute(.recordedAt))
+        if !members.isEmpty {
+            try container.encode(members, forKey: .attribute(.members))
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -52,9 +59,7 @@ extension Record: Codable {
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        subject = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.subject))
-        outcome = try container.decodeIfPresent(String.self, forKey: .attribute(.outcome))
-        recordedAt = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.recordedAt))
+        members = try container.decodeIfPresent([HolonRef].self, forKey: .attribute(.members)) ?? []
     }
 }
 

@@ -1,6 +1,9 @@
 import Foundation
 
-/// A PlanAction model following Schema.org ontology (https://schema.org/PlanAction)
+/// A PlanAction model following Schema.org ontology (https://schema.org/PlanAction).
+///
+/// - Important: Use `Plan` for new code. `PlanAction` remains for migration only.
+@available(*, deprecated, renamed: "Plan")
 public struct PlanAction: Hashable, Sendable {
     /// Unique identifier for the plan action
     public var identifier: String?
