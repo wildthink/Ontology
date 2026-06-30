@@ -13,14 +13,14 @@ swift test
 
 # Run a single test
 swift test --filter OntologyTests/<TestClassName>/<testMethodName>
-# Example: swift test --filter OntologyTests/OccurrenceTests/testEncoding
+# Example: swift test --filter OntologyTests/OccurrenceBridgeTests/testBasicProperties
 ```
 
 CI runs `swift build -v` and `swift test -v` against Swift 6.0, 6.1, and 6.2.
 
 ## Architectural direction
 
-The codebase is in active redesign toward a **hub-and-spoke** architecture. What follows describes both the current state and the intended direction. When adding or refactoring code, prefer the intended direction.
+The codebase follows a **hub-and-spoke** architecture.
 
 ### Hub: this package's own ontology
 
@@ -35,7 +35,7 @@ Every meaningful concept in this ontology is a **Holon** — simultaneously:
 
 **Entity** is a Holon with typed, machine-readable attributes (`Codable`). Concrete types like `Person`, `Place`, `Organization`, `Plan`, `Occurrence` conform to `Entity`.
 
-**Value types** (`DateTime`, `GeoCoordinates`, `QuantitativeValue`, `RRule`) are not Holons — they have no independent identity and live embedded in an Entity's fields.
+**Value types** (`DateTime`, `GeoCoordinates`, `QuantitativeValue`) are not Holons — they have no independent identity and live embedded in an Entity's fields.
 
 ### Core type vocabulary
 
@@ -54,7 +54,7 @@ The key distinction between `Plan` and `Occurrence` — do not conflate them:
 | `DateTime`, `GeoCoordinates`, `QuantitativeValue` | Value types — embedded in parent frontmatter | No |
 | Weather types | Transient sensor data, no narrative | No |
 
-`Plan` replaces the old `Event` (abstract) and `PlanAction`. `Occurrence` replaces the old concrete `Event` instance. `RRule` is never a file — it lives in the `Plan`'s frontmatter.
+`Plan` replaces the old `Event` (abstract) and `PlanAction`. `Occurrence` replaces the old concrete `Event` instance. `Event` and `PlanAction` are still present but marked `@available(*, deprecated)` — use `Plan` and `Occurrence` for all new code.
 
 ### Markdown as exchange format
 
@@ -66,14 +66,17 @@ taxon: person
 id: person.3f8a91b2
 givenName: Jane
 familyName: Smith
-worksFor: "[[org.4c2d7e1a]]"
 tags: [npc, innkeeper]
 ---
 
 Jane has run The Rusty Flagon for thirty years.
 ```
 
-Frontmatter keys are this ontology's field names. The YAML parser is `universal` (see Dependencies), which converts YAML → JSON → standard `Decodable`.
+Frontmatter keys are this ontology's field names (not JSON-LD `@`-prefixed keys). The `taxon` key replaces `@type`; `id` replaces `@id`; `@context` is omitted.
+
+**Reading:** `MarkdownDocument(string:)` / `MarkdownDocument(contentsOf:)` splits the fence, then `FrontmatterParser.decode(_:from:)` runs YAML → JSON → `Decodable` via `universal`.
+
+**Writing:** `MarkdownDocument(_ entity:, body:)` encodes via `JSONEncoder`, normalises keys, serialises to YAML, then `MarkdownDocument.write(to:)` writes atomically.
 
 ### HolonRef — two reference modes
 
@@ -86,39 +89,59 @@ public enum HolonRef: Hashable, Codable, Sendable {
 
 Use `.entity` for references between semantic entities. Use `.path` for binary assets co-located with files. Entity refs survive folder reorganization; path refs do not.
 
+WikiLink syntax `[[taxon.id]]` is parsed by `WikiLinkScanner` into `HolonRef.entity` values and scanned from `MarkdownDocument.wikilinks`.
+
 ### Physical vs. logical holarchy
 
 The **directory tree** is physical organization (where files live). The **logical holarchy** is conceptual structure (what belongs to what) and may cross directory boundaries.
 
 `_index.md` files (taxon: `collection`) declare logical membership via `HolonRef` lists, independently of the directory layout. A `Person` in `people/jane.md` can be a member of a campaign arc's collection without moving the file.
 
-### Target structure (intended)
+### Module structure (current)
 
 ```
 Sources/
   Ontology/           # Hub — pure Swift, Foundation only
-    Types/            # Person, Place, Organization, Plan, Occurrence, Record
-    Entities/         # Holon, Entity, HolonRef, Taxon, Identifiers, Word64
-    Markdown/         # MarkdownDocument, FrontmatterParser (via universal), WikiLinkScanner
-    JSON-LD.swift     # JSONLDCodingKey — Schema.org spoke serialization infrastructure
-    Schema.swift
+    Types/            # Person, Place, Organization, Plan, Occurrence, Record, Collection
+    Entities/         # Holon, Entity, HolonRef, Taxon, Identifiers
+    Markdown/         # MarkdownDocument, FrontmatterParser, WikiLinkScanner, MarkdownWriter
+    Extensions/       # RecurrenceRuleRFC5545FormatStyle (vendored, MIT)
+    Schema.swift      # JSONLDCodingKey, schema.org constant
 
-  OntologyApple/      # Spoke — all #if canImport blocks live here, not in hub types
-  OntologyGoogle/     # Spoke (future)
-  Presentation/       # SwiftUI views (depends on Ontology only)
+  OntologyApple/      # Spoke — all #if canImport blocks live here
+    EventBridge       # EKEvent ↔ Occurrence (canonical), EKEvent ↔ Event (deprecated)
+    PlanBridge        # EKReminder → Plan
+    PlanActionBridge  # EKReminder → PlanAction (deprecated)
+    PersonBridge      # CNContact ↔ Person
+    PlaceBridge       # CLPlacemark → Place
+    WeatherBridge     # WeatherKit → WeatherConditions / WeatherForecast
+    ...
+
+  Presentation/       # SwiftUI views (depends on OntologyApple)
 ```
 
-Apple bridging (`#if canImport(Contacts)`, `#if canImport(EventKit)`, etc.) currently lives inside hub type files. It should move to `OntologyApple/` so spoke changes don't touch hub types.
+`OntologyApple.swift` re-exports `Ontology` via `@_exported import Ontology`.
 
-### Current state (before refactor)
+### All SchemaEntityReference + Entity conformances live in Identifiers.swift
 
-Hub types still use Schema.org naming conventions and embed Apple bridging directly. The `#if canImport(...)` pattern is scattered through `Sources/Ontology/Types/`. The JSON-LD encoding pattern (`JSONLDCodingKey<T>`) is in place and will remain as the Schema.org spoke's serialization layer.
+Do not add `SchemaEntityReference` or `Entity` conformances inside type files. All conformances for hub types belong in `Sources/Ontology/Entities/Identifiers.swift`. Deprecated type conformances go at the bottom of that file, marked `@available(*, deprecated)`.
 
 ### Entity identity
 
-`Taxon` is a compact string-backed value type (stored as `Word64`/`Char10`, a 6-bit-packed Int64, max 10 alphanumeric chars) used to tag entity kinds. `Word64` is `ExpressibleByStringLiteral` for ergonomic call sites.
+`Taxon` is a string-backed value type (`ExpressibleByStringLiteral`, `CustomStringConvertible`) used to tag entity kinds. Static constants are declared in `Taxon.swift` (`.person`, `.org`, `.place`, `.plan`, `.occurrence`, `.record`, `.collection`, `.event`).
 
-Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable across file renames and directory reorganization.
+Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable across file renames and directory reorganization. `EntityReference.shortID(taxon:)` generates them.
+
+### JSON-LD encoding pattern
+
+All hub types use `JSONLDCodingKey<CodingKeys>` for their `Codable` conformance:
+
+- `.context` → `"@context"` (only at root: `encoder.codingPath.isEmpty`)
+- `.type` → `"@type"` (always; value is `String(describing: Self.self)`)
+- `.id` → `"@id"` (for `identifier`)
+- `.attribute(.name)` → `"name"` (for all other fields)
+
+When decoding, validate `@type` conditionally (`decodeIfPresent`) to stay compatible with frontmatter YAML (which has no `@type`).
 
 ### DateTime encoding
 
@@ -126,10 +149,10 @@ Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable a
 
 ### Recurrence rules
 
-`RecurrenceRuleRFC5545FormatStyle` implements `FormatStyle` / `ParseStrategy` for `Calendar.RecurrenceRule` ↔ RFC 5545 RRULE strings. Vendored from RRuleKit (MIT). Belongs inside `Plan`'s frontmatter — not a standalone entity.
+`RecurrenceRuleRFC5545FormatStyle` implements `FormatStyle` / `ParseStrategy` for `Calendar.RecurrenceRule` ↔ RFC 5545 RRULE strings. Vendored from RRuleKit (MIT). The `Plan.rrule` field stores the RFC 5545 string directly (not a parsed `Calendar.RecurrenceRule`).
 
 ### Dependencies
 
-- **universal** (`marcprux/universal`) — zero-dep YAML/JSON/XML/PLIST parser; used for frontmatter parsing (YAML → JSON → `Decodable`)
+- **universal** (`marcprux/universal`, branch: main) — zero-dep YAML/JSON/XML/PLIST parser; used for frontmatter parsing (YAML → JSON → `Decodable`)
 - **Period** — date period/range types
 - **YYJSON** (`swift-yyjson`) — fast JSON for Schema.org/JSON-LD spoke output

@@ -9,6 +9,7 @@ public struct Plan: Hashable, Sendable {
     public var startDate: DateTime?
     public var endDate: DateTime?
     public var location: Place?
+    public var url: URL?
     /// RFC 5545 RRULE string, e.g. "FREQ=WEEKLY;BYDAY=FR"
     public var rrule: String?
     public var tags: [String]?
@@ -20,6 +21,7 @@ public struct Plan: Hashable, Sendable {
         startDate: DateTime? = nil,
         endDate: DateTime? = nil,
         location: Place? = nil,
+        url: URL? = nil,
         rrule: String? = nil,
         tags: [String]? = nil
     ) {
@@ -29,6 +31,7 @@ public struct Plan: Hashable, Sendable {
         self.startDate = startDate
         self.endDate = endDate
         self.location = location
+        self.url = url
         self.rrule = rrule
         self.tags = tags
     }
@@ -36,7 +39,7 @@ public struct Plan: Hashable, Sendable {
 
 extension Plan: Codable {
     private enum CodingKeys: String, CodingKey {
-        case name, description, startDate, endDate, location, rrule, tags
+        case name, description, startDate, endDate, location, url, rrule, tags
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -51,6 +54,7 @@ extension Plan: Codable {
         try container.encodeIfPresent(startDate, forKey: .attribute(.startDate))
         try container.encodeIfPresent(endDate, forKey: .attribute(.endDate))
         try container.encodeIfPresent(location, forKey: .attribute(.location))
+        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
         try container.encodeIfPresent(rrule, forKey: .attribute(.rrule))
         try container.encodeIfPresent(tags, forKey: .attribute(.tags))
     }
@@ -63,8 +67,10 @@ extension Plan: Codable {
         startDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.startDate))
         endDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.endDate))
         location = try container.decodeIfPresent(Place.self, forKey: .attribute(.location))
+        if let urlString = try container.decodeIfPresent(String.self, forKey: .attribute(.url)) {
+            url = URL(string: urlString)
+        }
         rrule = try container.decodeIfPresent(String.self, forKey: .attribute(.rrule))
         tags = try container.decodeIfPresent([String].self, forKey: .attribute(.tags))
     }
 }
-

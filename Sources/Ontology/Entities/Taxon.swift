@@ -48,15 +48,15 @@ extension Taxon: Codable {
     }
 }
 
-extension Taxon: CustomStringConvertible {
+extension Taxon: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
-        self.representation = value // Word64(stringLiteral: value)
+        self.representation = value
     }
 }
 
-extension Taxon: ExpressibleByStringLiteral {
+extension Taxon: CustomStringConvertible {
     public var description: String {
-        representation.description
+        representation
     }
 }
 
