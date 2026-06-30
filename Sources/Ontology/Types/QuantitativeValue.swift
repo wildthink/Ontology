@@ -53,10 +53,10 @@ extension QuantitativeValue: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        // Verify type is correct
+        // Validate @type when present (JSON-LD); absent in YAML frontmatter — both are valid.
         let describedType = String(describing: Self.self)
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == describedType else {
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type),
+           decodedType != describedType {
             throw DecodingError.dataCorruptedError(
                 forKey: .type,
                 in: container,

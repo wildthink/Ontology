@@ -1,6 +1,9 @@
 import Foundation
 
-/// An ItemList model following Schema.org ontology (https://schema.org/ItemList)
+/// An ItemList model following Schema.org ontology (https://schema.org/ItemList).
+///
+/// - Important: Use `Collection` for grouping entities. `ItemList` remains for migration only.
+@available(*, deprecated, renamed: "Collection")
 public struct ItemList: Hashable, Sendable {
     /// Unique identifier for the item list
     public var identifier: String?

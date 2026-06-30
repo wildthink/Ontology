@@ -24,37 +24,43 @@ The codebase follows a **hub-and-spoke** architecture.
 
 ### Hub: this package's own ontology
 
-**This package's types are the hub.** Schema.org, Apple frameworks, Google Suite, OKF, and JSON-LD are all spokes. Where field names happen to align with Schema.org (e.g. `givenName`, `startDate`), that's a convenience — not a commitment. When the ontology's semantics diverge from Schema.org, the ontology wins.
+**This package's types are the hub.** Schema.org, Apple frameworks, Google Workspace, OKF, and JSON-LD are all spokes. Where field names happen to align with Schema.org (e.g. `givenName`, `startDate`), that's a convenience — not a commitment. When the ontology's semantics diverge from Schema.org, the ontology wins.
 
 ### Holon + Entity
 
-Every meaningful concept in this ontology is a **Holon** — simultaneously:
-1. A whole thing in itself (has identity: `taxon` + `id`)
-2. Made of parts (contains other holons)
-3. Part of something larger (belongs to a parent holon)
+Every meaningful concept is a **Holon** — simultaneously a whole thing in itself, made of parts, and part of something larger. **Entity** is a Holon with typed, machine-readable attributes (`Codable`). Concrete types like `Person`, `Place`, `Organization`, `Plan`, `Occurrence`, `Task`, `Commitment` conform to `Entity`.
 
-**Entity** is a Holon with typed, machine-readable attributes (`Codable`). Concrete types like `Person`, `Place`, `Organization`, `Plan`, `Occurrence` conform to `Entity`.
-
-**Value types** (`DateTime`, `GeoCoordinates`, `QuantitativeValue`) are not Holons — they have no independent identity and live embedded in an Entity's fields.
+**Value types** (`DateTime`, `GeoCoordinates`, `QuantitativeValue`, `Alarm`) have no independent identity and live embedded in an Entity's fields.
 
 ### Core type vocabulary
-
-The key distinction between `Plan` and `Occurrence` — do not conflate them:
 
 | Type | What it is | Standalone file? |
 |---|---|---|
 | `Plan` | Intent or template; may carry an RRule and generate Occurrences | Yes |
 | `Occurrence` | Atomic space-time fact: a single specific time + place + description | Yes |
+| `Task` | Actionable work unit owned by a Plan | Yes |
+| `Commitment` | Relational promise or obligation between actors within a Plan | Yes |
 | `Record` | Documented outcome: a Plan or Occurrence + what actually happened | Yes |
 | `Person` | A person with identity, narrative, relationships | Yes |
 | `Organization` | A group, faction, institution | Yes |
 | `Place` | A named location with description | Yes |
-| `Collection` | A logical grouping of HolonRefs (see below) | Yes (`_index.md`) |
+| `Collection` | A logical grouping of HolonRefs | Yes (`_index.md`) |
 | `RRule` | Recurrence pattern — embedded inside a `Plan`, never standalone | No |
-| `DateTime`, `GeoCoordinates`, `QuantitativeValue` | Value types — embedded in parent frontmatter | No |
+| `Alarm` | Notification trigger embedded in Plan/Occurrence/Task | No |
+| `DateTime`, `GeoCoordinates`, `QuantitativeValue` | Value types embedded in parent frontmatter | No |
 | Weather types | Transient sensor data, no narrative | No |
 
-`Plan` replaces the old `Event` (abstract) and `PlanAction`. `Occurrence` replaces the old concrete `Event` instance. `Event` and `PlanAction` are still present but marked `@available(*, deprecated)` — use `Plan` and `Occurrence` for all new code.
+**Plan vs Occurrence** — do not conflate them:
+- `Plan` = intent (may have `rrule`, generates Occurrences)
+- `Occurrence` = atomic space-time fact
+
+**Opportunity pattern**: `Plan` with `status: "opportunity"` and `subject: HolonRef` pointing to a seed Occurrence. No separate type.
+
+**ScheduleItem pattern**: `Occurrence` with `plan: HolonRef` set. No separate type.
+
+**Alarms are informational** — they may be set on Plans, Occurrences, and Tasks to trigger notifications, but plan progress and completion must never depend on them.
+
+`Event` and `PlanAction` are still present but marked `@available(*, deprecated)` — use `Plan` and `Occurrence` for all new code.
 
 ### Markdown as exchange format
 
@@ -62,21 +68,25 @@ The canonical persistence and exchange format is **one markdown file per Entity*
 
 ```markdown
 ---
-taxon: person
-id: person.3f8a91b2
-givenName: Jane
-familyName: Smith
-tags: [npc, innkeeper]
+taxon: plan
+id: plan.3f8a91b2
+name: Session prep
+status: active
+alarms:
+  - method: display
+    offsetMinutes: -60
 ---
 
-Jane has run The Rusty Flagon for thirty years.
+First planning meeting confirmed.
 ```
 
-Frontmatter keys are this ontology's field names (not JSON-LD `@`-prefixed keys). The `taxon` key replaces `@type`; `id` replaces `@id`; `@context` is omitted.
+Frontmatter keys are this ontology's field names. The `taxon` key replaces `@type`; `id` replaces `@id`; `@context` is omitted.
 
 **Reading:** `MarkdownDocument(string:)` / `MarkdownDocument(contentsOf:)` splits the fence, then `FrontmatterParser.decode(_:from:)` runs YAML → JSON → `Decodable` via `universal`.
 
 **Writing:** `MarkdownDocument(_ entity:, body:)` encodes via `JSONEncoder`, normalises keys, serialises to YAML, then `MarkdownDocument.write(to:)` writes atomically.
+
+**YAML serialization rule:** `@type` is written when encoding but validated with `decodeIfPresent` when decoding — frontmatter never has `@type`. Every type's `init(from:)` must use `decodeIfPresent` for the `.type` key, not `decode`. This also applies to nested value types like `QuantitativeValue`.
 
 ### HolonRef — two reference modes
 
@@ -87,35 +97,49 @@ public enum HolonRef: Hashable, Codable, Sendable {
 }
 ```
 
-Use `.entity` for references between semantic entities. Use `.path` for binary assets co-located with files. Entity refs survive folder reorganization; path refs do not.
+Use `.entity` for semantic entity references. Use `.path` for binary assets. WikiLink syntax `[[taxon.id]]` is parsed by `WikiLinkScanner` into `HolonRef.entity` values.
 
-WikiLink syntax `[[taxon.id]]` is parsed by `WikiLinkScanner` into `HolonRef.entity` values and scanned from `MarkdownDocument.wikilinks`.
+### Taxon constants
 
-### Physical vs. logical holarchy
+All static Taxon constants are declared in `Taxon.swift`. Current set:
 
-The **directory tree** is physical organization (where files live). The **logical holarchy** is conceptual structure (what belongs to what) and may cross directory boundaries.
+```swift
+.anything, .agent, .person, .org, .place, .event, .topic,
+.plan, .occurrence, .record, .collection, .task, .commitment
+```
 
-`_index.md` files (taxon: `collection`) declare logical membership via `HolonRef` lists, independently of the directory layout. A `Person` in `people/jane.md` can be a member of a campaign arc's collection without moving the file.
-
-### Module structure (current)
+### Module structure
 
 ```
 Sources/
   Ontology/           # Hub — pure Swift, Foundation only
-    Types/            # Person, Place, Organization, Plan, Occurrence, Record, Collection
+    Types/            # Person, Place, Organization, Plan, Occurrence, Record,
+                      #   Task, Commitment, Collection, Alarm, QuantitativeValue, …
     Entities/         # Holon, Entity, HolonRef, Taxon, Identifiers
-    Markdown/         # MarkdownDocument, FrontmatterParser, WikiLinkScanner, MarkdownWriter
+    Markdown/         # MarkdownDocument, FrontmatterParser, WikiLinkScanner,
+                      #   MarkdownWriter, YAMLSerializer
     Extensions/       # RecurrenceRuleRFC5545FormatStyle (vendored, MIT)
     Schema.swift      # JSONLDCodingKey, schema.org constant
 
   OntologyApple/      # Spoke — all #if canImport blocks live here
-    EventBridge       # EKEvent ↔ Occurrence (canonical), EKEvent ↔ Event (deprecated)
-    PlanBridge        # EKReminder → Plan
-    PlanActionBridge  # EKReminder → PlanAction (deprecated)
-    PersonBridge      # CNContact ↔ Person
+    AlarmBridge       # Alarm ↔ EKAlarm
+    EventBridge       # Occurrence ↔ EKEvent (canonical)
+    PlanBridge        # Plan ↔ EKReminder
+    TaskBridge        # Task ↔ EKReminder
+    PersonBridge      # Person ↔ CNContact
     PlaceBridge       # CLPlacemark → Place
     WeatherBridge     # WeatherKit → WeatherConditions / WeatherForecast
-    ...
+    …
+
+  OntologyGoogle/     # Spoke — Google Workspace API types + bridges
+    GCalEvent         # GCalEvent ↔ Occurrence / Plan (bidirectional)
+    GCalCalendar      # GCalCalendar → Collection (read only)
+    GPerson           # GPerson ↔ Person (bidirectional)
+    GTask             # GTask ↔ Task / Plan (bidirectional)
+    GDriveFile        # GDriveFile → Record (read only)
+
+  OntologyOKF/        # Spoke — markdown bundle read/write
+    OKFBundle, OKFDocument, OKFReader
 
   Presentation/       # SwiftUI views (depends on OntologyApple)
 ```
@@ -126,11 +150,25 @@ Sources/
 
 Do not add `SchemaEntityReference` or `Entity` conformances inside type files. All conformances for hub types belong in `Sources/Ontology/Entities/Identifiers.swift`. Deprecated type conformances go at the bottom of that file, marked `@available(*, deprecated)`.
 
+### Bidirectional bridging pattern
+
+All bridges follow this convention:
+
+- **Read direction** (foreign → hub): `HubType.init(_ foreign:)` — a regular or failable init, defined in the spoke module.
+- **Write direction** (hub → foreign): Three entry points, all in the spoke module:
+  - `ForeignType.init(_ hub:)` — constructs a fresh foreign value from a hub type
+  - `hub.apply(to: foreign)` — updates an existing foreign object in place; returns `Bool` (true if changes were made)
+  - `hub.makeForeign(in:)` — factory that creates, configures, and returns a new foreign object (EventKit style)
+
+Google types that are metadata sources without a write path (Calendar list, Drive file) are read-only (`GCalCalendar`, `GDriveFile`).
+
+### Google alarm sign convention
+
+Google Calendar stores positive minutes-before (e.g., `10` = 10 minutes before). The hub stores negative `offsetMinutes` (e.g., `-10` = 10 minutes before). Conversion: `hub.offsetMinutes = -(gcal.minutes ?? 15)`. Absolute-date alarms fall back to 15-minute popup when writing to Google (API limitation).
+
 ### Entity identity
 
-`Taxon` is a string-backed value type (`ExpressibleByStringLiteral`, `CustomStringConvertible`) used to tag entity kinds. Static constants are declared in `Taxon.swift` (`.person`, `.org`, `.place`, `.plan`, `.occurrence`, `.record`, `.collection`, `.event`).
-
-Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable across file renames and directory reorganization. `EntityReference.shortID(taxon:)` generates them.
+`Taxon` is a string-backed value type (`ExpressibleByStringLiteral`, `CustomStringConvertible`). Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable across file renames. `EntityReference.shortID(taxon:)` generates them.
 
 ### JSON-LD encoding pattern
 
@@ -141,7 +179,7 @@ All hub types use `JSONLDCodingKey<CodingKeys>` for their `Codable` conformance:
 - `.id` → `"@id"` (for `identifier`)
 - `.attribute(.name)` → `"name"` (for all other fields)
 
-When decoding, validate `@type` conditionally (`decodeIfPresent`) to stay compatible with frontmatter YAML (which has no `@type`).
+When decoding, validate `@type` with `decodeIfPresent` to stay compatible with frontmatter YAML (which has no `@type`). This applies to ALL types including value types like `QuantitativeValue`.
 
 ### DateTime encoding
 
@@ -150,6 +188,17 @@ When decoding, validate `@type` conditionally (`decodeIfPresent`) to stay compat
 ### Recurrence rules
 
 `RecurrenceRuleRFC5545FormatStyle` implements `FormatStyle` / `ParseStrategy` for `Calendar.RecurrenceRule` ↔ RFC 5545 RRULE strings. Vendored from RRuleKit (MIT). The `Plan.rrule` field stores the RFC 5545 string directly (not a parsed `Calendar.RecurrenceRule`).
+
+### YAMLSerializer array-of-objects rule
+
+When serializing arrays of objects in YAML, the first key of each object item goes on the same line as the `- ` sequence indicator. Subsequent keys in the same item use `pad + "  "` (continuation indent). This is what `YAMLSerializer.array()` implements. Do not revert to the simpler `"\(pad)- \(serialize($0, indent: indent + 1))"` pattern — it produces over-indented YAML that breaks the `universal` parser when scalar keys follow the array in the same document.
+
+### Plan.dueDate vs Plan.startDate
+
+- `startDate` = when a scheduled time block begins (calendar semantics)
+- `dueDate` = target completion date (goal semantics)
+
+`EKReminder.dueDateComponents` maps to `Plan.dueDate` (not `startDate`). `Plan.apply(to reminder:)` uses `dueDate ?? startDate` as a fallback.
 
 ### Dependencies
 

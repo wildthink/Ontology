@@ -1,163 +1,311 @@
 # Ontology
 
-A Swift library for working with structured data.
-This library provides [JSON-LD][json-ld] serializable types
-that can represent entities from various vocabularies,
-with a focus on [Schema.org][schema.org].
-It includes convenience initializers for types from Apple frameworks, like
-[Contacts][framework-contacts] and [EventKit][framework-eventkit].
+A Swift library for structured, narrative-friendly data exchange. Provides JSON-LD serializable entity types, a markdown-based persistence format, and bidirectional bridges to Apple frameworks (EventKit, Contacts, CoreLocation) and Google Workspace APIs (Calendar, People, Tasks, Drive).
 
 ## Requirements
 
 - Swift 6.0+ / Xcode 16+
-- macOS 14.0+ (Sonoma)
-- iOS 17.0+
+- macOS 14.0+ (Sonoma) · iOS 17.0+
 
 ## Installation
 
-### Swift Package Manager
-
-Add the following to your `Package.swift` file:
-
 ```swift
+// Package.swift
 dependencies: [
-    .package(url: "https://github.com/mattt/Ontology.git", from: "0.8.0")
+    .package(url: "https://github.com/wildthink/Ontology.git", branch: "main")
 ]
 ```
 
-## Resource
-[Apple Unified Maps URL](https://developer.apple.com/documentation/mapkit/unified-map-urls)
+Add the products you need:
 
-## Supported Types
+| Product | What it adds |
+|---|---|
+| `Ontology` | Pure hub — no platform dependencies |
+| `OntologyApple` | EventKit, Contacts, CoreLocation, WeatherKit bridges |
+| `OntologyGoogle` | Google Calendar, People, Tasks, Drive bridges |
+| `OntologyOKF` | Markdown/YAML file read-write (OKF bundle format) |
+| `Presentation` | SwiftUI views (depends on OntologyApple) |
 
-### Schema.org Vocabulary
+---
 
-Supported Schema.org types and their Apple framework equivalents:
+## Core types
 
-| Schema.org Type | Apple Framework Type | Description |
-|----------------|----------------------|-------------|
-| [ContactPoint](https://schema.org/ContactPoint) | [CNInstantMessageAddress](https://developer.apple.com/documentation/contacts/cninstantmessageaddress) | Represents a method of contact like instant messaging |
-| [DateTime](https://schema.org/DateTime) | [Date](https://developer.apple.com/documentation/foundation/date) | Represents a date and time with ISO 8601 formatting |
-| [Event](https://schema.org/Event) | [EKEvent](https://developer.apple.com/documentation/eventkit/ekevent) | Represents an event with start/end dates, location, etc. |
-| [GeoCoordinates](https://schema.org/GeoCoordinates) | [CLLocation](https://developer.apple.com/documentation/corelocation/cllocation) | Represents geographic coordinates with latitude, longitude, and optional elevation |
-| [Organization](https://schema.org/Organization) | [CNContact](https://developer.apple.com/documentation/contacts/cncontact) | Represents an organization with properties like name and contact info |
-| [Person](https://schema.org/Person) | [CNContact](https://developer.apple.com/documentation/contacts/cncontact) | Represents a person with properties like name, contact info, and relationships |
-| [Place](https://schema.org/Place) | [MKPlacemark](https://developer.apple.com/documentation/mapkit/mkplacemark), [MKMapItem](https://developer.apple.com/documentation/mapkit/mkmapitem) | Represents a geographical location, specific address, or point of interest |
-| [ItemList](https://schema.org/ItemList) | [EKCalendar](https://developer.apple.com/documentation/eventkit/ekcalendar) | Represents a list of items with properties like name, identifier, and item count |
-| [PlanAction](https://schema.org/PlanAction) | [EKReminder](https://developer.apple.com/documentation/eventkit/ekreminder) | Represents a planned action or task with properties like name, description, due date, and completion status |
-| [PostalAddress](https://schema.org/PostalAddress) | [CNPostalAddress](https://developer.apple.com/documentation/contacts/cnpostaladdress) | Represents a physical address with street, city, region, etc. |
-| [QuantitativeValue](https://schema.org/QuantitativeValue) | [Measurement](https://developer.apple.com/documentation/foundation/measurement) | Represents measurements with standardized units using UN/CEFACT Common Codes |
-| [Trip](https://schema.org/Trip) | [MKDirections.Response](https://developer.apple.com/documentation/mapkit/mkdirections/response), [MKDirections.ETAResponse](https://developer.apple.com/documentation/mapkit/mkdirections/etaresponse) | Represents an itinerary of visits to one or more places with optional arrival/departure times |
+### Planning domain
 
-### Apple WeatherKit Vocabulary
+| Type | What it represents | Standalone file? |
+|---|---|---|
+| `Plan` | Intent or template — owns commitments, tasks, schedule slots, alarms | Yes |
+| `Occurrence` | Atomic space-time fact: a single time + place + description | Yes |
+| `Task` | Actionable work unit belonging to a Plan | Yes |
+| `Commitment` | Relational promise or obligation between actors within a Plan | Yes |
+| `Record` | Documented outcome: what actually happened | Yes |
 
-Additional types supporting [Apple WeatherKit][weatherkit]:
+The lifecycle flows: **Opportunity → Plan → Commitments / Tasks / Schedule → Completion → Record**.
 
-| Type | WeatherKit Type | Description |
-|------|----------------|-------------|
-| WeatherForecast | [DayWeather](https://developer.apple.com/documentation/weatherkit/dayweather), [HourWeather](https://developer.apple.com/documentation/weatherkit/hourweather), [MinuteWeather](https://developer.apple.com/documentation/weatherkit/minuteweather) | Detailed weather forecast including temperature, precipitation, wind, sun/moon data |
-| WeatherConditions | [CurrentWeather](https://developer.apple.com/documentation/weatherkit/currentweather), [HourWeather](https://developer.apple.com/documentation/weatherkit/hourweather) | Current or hourly weather conditions including temperature, wind, and humidity |
+**Plan vs Occurrence** — the key distinction:
+- `Plan` = intent (may have an `rrule` and generate recurring Occurrences)
+- `Occurrence` = a specific time+place fact, optionally linked back to a Plan via `occurrence.plan`
 
-## Usage
+An **Opportunity** is a `Plan` with `status: Plan.Status.opportunity` and a `subject` ref pointing to a seed Occurrence. No separate type needed.
 
-### Creating objects and encoding as JSON-LD
+A **ScheduleItem** is an `Occurrence` with `plan` set. No separate type needed.
+
+**Alarms serve a plan but do not gate its completion.** Plans, Occurrences, and Tasks all carry `alarms: [Alarm]?`. These trigger notifications; they have no effect on `status`.
+
+### Identity and reference types
+
+| Type | Role |
+|---|---|
+| `Person` | A person with narrative, relationships, contact info |
+| `Organization` | A group or institution |
+| `Place` | A named location |
+| `Collection` | Logical grouping of `HolonRef`s; declared in `_index.md` |
+| `HolonRef` | Reference — `.entity(Taxon, String)` for entities, `.path(String)` for assets |
+| `Taxon` | String-backed entity kind tag (`.person`, `.plan`, `.task`, etc.) |
+
+### Value types (no independent identity)
+
+| Type | Role |
+|---|---|
+| `DateTime` | `Date` + optional `TimeZone` |
+| `GeoCoordinates` | Latitude, longitude, elevation |
+| `QuantitativeValue` | Numeric value + UN/CEFACT unit code (e.g. `HUR` for hours) |
+| `Alarm` | Trigger (offset minutes or absolute date) + delivery method |
+| `PostalAddress` | Structured postal address |
+
+---
+
+## Plan — full field reference
 
 ```swift
-import Ontology
-
-// Create a Person
-var person = Person()
-person.givenName = "John"
-person.familyName = "Doe"
-person.email = ["john.doe@example.com"]
-
-// Create an organization
-var organization = Organization()
-organization.name = "Example Corp"
-
-// Associate person with organization
-person.worksFor = organization
-
-// Encode to JSON-LD
-let encoder = JSONEncoder()
-let jsonData = try encoder.encode(person)
-print(String(data: jsonData, encoding: .utf8)!)
-
-// Output:
-// {
-//   "@context": "https://schema.org",
-//   "@type": "Person",
-//   "givenName": "John",
-//   "familyName": "Doe"
-// }
+var plan = Plan(
+    identifier: "plan.abc123",      // taxon.shortHash — stable across renames
+    name: "Session 12 preparation",
+    description: "Detailed notes…",
+    status: Plan.Status.active,     // see vocabulary below
+    startDate: DateTime(…),         // when a scheduled block begins
+    endDate:   DateTime(…),
+    dueDate:   DateTime(…),         // target completion date (goal semantics)
+    location:  place,
+    url:       url,
+    rrule:     "FREQ=WEEKLY;BYDAY=FR",  // RFC 5545, generates Occurrences
+    tags:      ["session", "prep"],
+    owner:     .entity(.person, "person.gm01"),
+    participants: [.entity(.person, "person.player01")],
+    subject:   .entity(.occurrence, "occurrence.seed01"),  // opportunity seed
+    effort:    QuantitativeValue(value: 3, unitCode: "HUR", unitText: "hours"),
+    alarms:    [.minutesBefore(60), .minutesBefore(15, method: "email")]
+)
 ```
 
-### Initializing from Apple framework types
+**Status vocabulary** (`Plan.Status`):
+
+| Constant | String |
+|---|---|
+| `.opportunity` | `"opportunity"` |
+| `.planning` | `"planning"` |
+| `.active` | `"active"` |
+| `.completed` | `"completed"` |
+| `.cancelled` | `"cancelled"` |
+| `.onHold` | `"on-hold"` |
+
+**Grouping** — collect a plan's tasks and commitments into a `Collection`:
 
 ```swift
-import Ontology
-import Contacts
-
-// Convert from Apple's CNContact to Schema.org Person
-let contact = CNMutableContact()
-contact.givenName = "Jane"
-contact.familyName = "Smith"
-contact.emailAddresses = [
-    CNLabeledValue(label: CNLabelHome,
-                   value: "jane.smith@example.com" as NSString)
-]
-
-// Convert to Schema.org Person
-let person = Person(contact)
+let col = plan.collection(members: [taskRef, commitmentRef])
+// col.identifier = "collection.plan.<plan-id>"
 ```
 
-### Configuring DateTime representations
+---
 
-By default, `DateTime` objects are encoded with their specified time zone,
-or GMT/UTC if none is specified.
-You can override the time zone used during encoding by providing
-a specific `TimeZone` in the `JSONEncoder`'s `userInfo` dictionary:
+## Task
 
 ```swift
-import Ontology
+let task = Task(
+    identifier: "task.abc123",
+    name: "Print character sheets",
+    description: "Two copies per player",
+    plan:     .entity(.plan, "plan.001"),
+    assignee: .entity(.person, "person.gm01"),
+    dueDate:  DateTime(…),
+    status:   .open,            // .open | .inProgress | .done | .cancelled
+    priority: 1,                // lower = higher priority
+    alarms:   [.minutesBefore(120)]
+)
+```
 
-// Create a DateTime object
-let dateTime = DateTime(Date())
+Status defaults to `.open` on decode when the key is absent.
 
-// Create an encoder that will use the local timezone
+---
+
+## Commitment
+
+```swift
+let invite = Commitment(
+    identifier: "commitment.abc123",
+    name: "GM invites player to session",
+    plan:      .entity(.plan, "plan.001"),
+    actor:     .entity(.person, "person.gm01"),
+    recipient: .entity(.person, "person.player01"),  // nil = self-commitment
+    role:      Commitment.Role.invitation,
+    status:    Commitment.Status.pending,
+    dueDate:   DateTime(…),
+    note:      "Please RSVP by Friday"
+)
+```
+
+**Role vocabulary** (`Commitment.Role`): `.invitation`, `.acceptance`, `.delegation`, `.acknowledgement`, `.selfCommitment`
+
+**Status vocabulary** (`Commitment.Status`): `.pending`, `.accepted`, `.declined`, `.completed`, `.cancelled`
+
+---
+
+## Alarm
+
+```swift
+// Relative trigger — negative = before start
+let a1 = Alarm.minutesBefore(15)              // 15 min before, "display" method
+let a2 = Alarm.minutesBefore(60, method: "email")
+
+// Absolute trigger
+let a3 = Alarm.at(DateTime(someDate), method: "email")
+```
+
+`Alarm.method` values: `"display"` (popup), `"email"`, `"audio"`.
+
+---
+
+## Markdown exchange format
+
+One file per entity; YAML frontmatter + markdown body:
+
+```markdown
+---
+taxon: plan
+id: plan.3f8a91b2
+name: Session 12 preparation
+status: active
+dueDate: "2024-06-15T00:00:00Z"
+owner: "[[person.gm01]]"
+alarms:
+  - method: display
+    offsetMinutes: -60
+---
+
+## Notes
+
+First planning meeting confirmed for Tuesday.
+```
+
+**Reading:**
+
+```swift
+import OntologyOKF
+
+let doc = try OKFDocument(contentsOf: url)
+let plan = try OKFReader.decode(Plan.self, from: doc.string())
+```
+
+**Writing:**
+
+```swift
+let doc = try OKFDocument(plan, body: "## Notes\n\n…")
+try doc.write(to: url)
+```
+
+WikiLinks `[[taxon.id]]` are parsed into `HolonRef.entity` values and available via `MarkdownDocument.wikilinks`.
+
+---
+
+## Apple bridges (OntologyApple)
+
+All bridges are bidirectional. The **read direction** takes the Apple type as an argument; the **write direction** gives you an `apply(to:)` mutating method plus a `make…(in:)` factory.
+
+| Hub type | Apple type | Direction |
+|---|---|---|
+| `Occurrence` | `EKEvent` | `Occurrence(ekEvent)` · `occ.apply(to: event)` · `occ.makeEKEvent(in:)` |
+| `Plan` | `EKReminder` | `Plan(reminder)` · `plan.apply(to: reminder)` · `plan.makeEKReminder(in:list:)` |
+| `Task` | `EKReminder` | `Task(reminder)` · `task.apply(to: reminder)` · `task.makeEKReminder(in:list:)` |
+| `Person` | `CNContact` | `Person(contact)` · `person.makeCNContact()` |
+| `Place` | `CLPlacemark` | `Place(placemark)` (read only) |
+| `Alarm` | `EKAlarm` | `Alarm(ekAlarm)` · `alarm.ekAlarm()` |
+
+`Plan.startDate` = when a calendar block begins. `Plan.dueDate` maps to `EKReminder.dueDateComponents`.
+
+---
+
+## Google Workspace bridges (OntologyGoogle)
+
+All Google types are `Codable` — decode straight from the API JSON response, encode for insert/update requests.
+
+| Hub type | Google type | Read | Write |
+|---|---|---|---|
+| `Occurrence` | `GCalEvent` | `Occurrence(gcalEvent)` | `GCalEvent(occurrence)` |
+| `Plan` | `GCalEvent` | `Plan(gcalEvent)` | `GCalEvent(plan)` |
+| `Plan` | `GTask` | `Plan(gTask)` | `GTask(plan)` |
+| `Task` | `GTask` | `Task(gTask)` | `GTask(task)` |
+| `Person` | `GPerson` | `Person(gPerson)` | `GPerson(person)` |
+| `Collection` | `GCalCalendar` | `Collection(gcalCalendar)` | — |
+| `Record` | `GDriveFile` | `Record(gDriveFile)` | — |
+
+**Alarm mapping:** Google stores positive minutes-before; the hub stores negative `offsetMinutes` (negative = before start). Absolute-date alarms fall back to 15-minute popup when writing to Google (API limitation).
+
+**Status mapping:** `Occurrence.normalizedStatus(_:)` maps Google/Apple status strings to Schema.org EventStatus vocabulary (`"EventScheduled"`, `"EventCancelled"`, `"EventPostponed"`).
+
+```swift
+// Decode a Calendar API response
+let events = try JSONDecoder().decode(GCalEventList.self, from: apiResponseData)
+let occurrences = events.items?.map { Occurrence($0) } ?? []
+
+// Build a request body from a hub Occurrence
+let body = GCalEvent(occurrence)
+let requestData = try JSONEncoder().encode(body)
+```
+
+---
+
+## JSON-LD encoding
+
+All hub types encode with `@context`, `@type`, and `@id` at the root. Nested value types omit `@context`:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Plan",
+  "@id": "plan.3f8a91b2",
+  "name": "Session 12 preparation",
+  "status": "active",
+  "effort": {
+    "@type": "QuantitativeValue",
+    "value": 3,
+    "unitCode": "HUR",
+    "unitText": "hours"
+  }
+}
+```
+
+`@type` is validated with `decodeIfPresent` — absent in YAML frontmatter, present in JSON-LD. Both are valid inputs.
+
+---
+
+## DateTime encoding
+
+```swift
 let encoder = JSONEncoder()
+// Priority: (1) userInfo override, (2) DateTime's own timeZone, (3) GMT
 encoder.userInfo[DateTime.timeZoneOverrideKey] = TimeZone.current
-
-// Or specify a particular timezone
-// encoder.userInfo[DateTime.timeZoneOverrideKey] = TimeZone(identifier: "America/New_York")
-
-// Encode using the specified timezone
-let jsonData = try encoder.encode(dateTime)
 ```
 
-This feature is particularly useful when:
-- Working with date-only values that should be interpreted in the user's local timezone
-- Ensuring consistent timezone representation across different data sources
-- Presenting dates to users in their local timezone regardless of how they were originally stored
+---
 
-So to recap, the date encoding priority is:
-1. `TimeZone` from encoder's `userInfo` (if provided)
-2. `TimeZone` from the `DateTime` object (if specified)
-3. GMT/UTC (default fallback)
+## Deprecated types
+
+`Event`, `PlanAction`, `ItemList`, `Trip` remain in the codebase marked `@available(*, deprecated)`. Use `Plan`, `Occurrence`, `Task`, and `Collection` for all new code.
+
+---
 
 ## License
 
-This project is available under the MIT license.
-See the LICENSE file for more info.
+MIT. See LICENSE.md.
 
-## Legal
-
-Apple Weather and Weather are trademarks of Apple Inc.
-This project is not affiliated with, endorsed, or sponsored by Apple Inc.
-
-[schema.org]: https://schema.org
-[json-ld]: https://json-ld.org
-[nws-api]: https://weather.gov
-[framework-contacts]: https://developer.apple.com/documentation/contacts/
-[framework-eventkit]: https://developer.apple.com/documentation/eventkit
-[weatherkit]: https://developer.apple.com/weatherkit/
+Apple Weather and Weather are trademarks of Apple Inc. This project is not affiliated with Apple Inc.

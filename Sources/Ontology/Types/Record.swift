@@ -10,6 +10,8 @@ public struct Record: Hashable, Sendable {
     /// Narrative of what actually happened.
     public var outcome: String?
     public var recordedAt: DateTime?
+    /// Link to the artifact (document, recording, etc.) this record refers to.
+    public var url: URL?
 
     public init(
         identifier: String? = nil,
@@ -17,7 +19,8 @@ public struct Record: Hashable, Sendable {
         description: String? = nil,
         subject: HolonRef? = nil,
         outcome: String? = nil,
-        recordedAt: DateTime? = nil
+        recordedAt: DateTime? = nil,
+        url: URL? = nil
     ) {
         self.identifier = identifier
         self.name = name
@@ -25,12 +28,13 @@ public struct Record: Hashable, Sendable {
         self.subject = subject
         self.outcome = outcome
         self.recordedAt = recordedAt
+        self.url = url
     }
 }
 
 extension Record: Codable {
     private enum CodingKeys: String, CodingKey {
-        case name, description, subject, outcome, recordedAt
+        case name, description, subject, outcome, recordedAt, url
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -45,6 +49,7 @@ extension Record: Codable {
         try container.encodeIfPresent(subject, forKey: .attribute(.subject))
         try container.encodeIfPresent(outcome, forKey: .attribute(.outcome))
         try container.encodeIfPresent(recordedAt, forKey: .attribute(.recordedAt))
+        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
     }
 
     public init(from decoder: Decoder) throws {
@@ -55,6 +60,9 @@ extension Record: Codable {
         subject = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.subject))
         outcome = try container.decodeIfPresent(String.self, forKey: .attribute(.outcome))
         recordedAt = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.recordedAt))
+        if let s = try container.decodeIfPresent(String.self, forKey: .attribute(.url)) {
+            url = URL(string: s)
+        }
     }
 }
 
