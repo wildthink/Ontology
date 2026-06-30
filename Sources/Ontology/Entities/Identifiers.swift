@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol EntityReference: Hashable, Codable {
+public protocol EntityReference: Holon, Hashable, Codable {
     var id: EID   { get }
     var taxon: Taxon { get }
 }
@@ -41,13 +41,19 @@ extension SchemaEntityReference {
 extension Person: SchemaEntityReference {
     public static var taxon: Taxon { .person }
 }
+extension Person: Entity {}
+
 extension Organization: SchemaEntityReference {
     public static var taxon: Taxon { .org }
 }
+extension Organization: Entity {}
+
 extension Place: SchemaEntityReference {
-    public static var taxon: Taxon { .person }
+    public static var taxon: Taxon { .place }
 }
+extension Place: Entity {}
 
 extension Event: SchemaEntityReference {
     public static var taxon: Taxon { .event }
 }
+extension Event: Entity {}

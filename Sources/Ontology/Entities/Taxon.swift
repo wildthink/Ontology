@@ -28,6 +28,11 @@ public extension Taxon {
 
     static let event: Taxon = "event"
     static let topic: Taxon = "topic"
+
+    static let plan: Taxon = "plan"
+    static let occurrence: Taxon = "occurrence"
+    static let record: Taxon = "record"
+    static let collection: Taxon = "collection"
 }
 
 extension Taxon: Codable {
