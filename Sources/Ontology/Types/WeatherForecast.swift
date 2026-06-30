@@ -108,52 +108,11 @@ public struct WeatherForecast: Hashable, Sendable {
 
     /// The pressure trend (rising, falling, steady)
     public var pressureTrend: String?
-}
 
-#if canImport(WeatherKit)
-    import WeatherKit
-
-    extension WeatherForecast {
-        /// Initialize a weather forecast from a DayWeather instance
-        public init(_ forecast: DayWeather) {
-            self.dateTime = forecast.date
-            self.windSpeed = forecast.wind.speed
-            self.lowTemperature = forecast.lowTemperature
-            self.highTemperature = forecast.highTemperature
-            
-            // FIXME: error: value of type 'DayWeather' has no member 'minimumHumidity'
-            // if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
-            //     self.minimumHumidity = forecast.minimumHumidity
-            //     self.maximumHumidity = forecast.maximumHumidity
-            // }
-            self.precipitationChance = forecast.precipitationChance
-            self.condition = forecast.condition.description
-            self.uvIndex = forecast.uvIndex.value
-            self.precipitationAmount = forecast.precipitationAmount
-        }
-
-        /// Initialize a weather forecast from an HourWeather instance
-        public init(_ forecast: HourWeather) {
-            self.dateTime = forecast.date
-            self.temperature = forecast.temperature
-            self.apparentTemperature = forecast.apparentTemperature
-            self.humidity = forecast.humidity
-            self.windSpeed = forecast.wind.speed
-            self.condition = forecast.condition.description
-            self.precipitationChance = forecast.precipitationChance
-            self.precipitationAmount = forecast.precipitationAmount
-            self.uvIndex = forecast.uvIndex.value
-        }
-
-        /// Initialize a weather forecast from a MinuteWeather instance
-        public init(_ forecast: MinuteWeather) {
-            self.dateTime = forecast.date
-            self.precipitation = forecast.precipitation.description
-            self.precipitationChance = forecast.precipitationChance
-            self.precipitationIntensity = forecast.precipitationIntensity
-        }
+    public init(dateTime: Date) {
+        self.dateTime = dateTime
     }
-#endif
+}
 
 // Conform to Codable for JSON-LD serialization
 extension WeatherForecast: Codable {

@@ -11,29 +11,53 @@ let package = Package(
             name: "Ontology",
             targets: ["Ontology"]),
         .library(
+            name: "OntologyApple",
+            targets: ["OntologyApple"]),
+        .library(
+            name: "OntologyOKF",
+            targets: ["OntologyOKF"]),
+        .library(
             name: "Presentation",
             targets: ["Presentation"]),
     ],
     dependencies: [
         .package(url: "https://github.com/davdroman/Period.git", from: "1.1.0"),
 //        .package(url: "https://github.com/apple/swift-log", from: "1.10.1"),
-//        .package(url: "https://github.com/mattt/swift-yyjson.git", from: "0.5.0"),
+        .package(url: "https://github.com/mattt/swift-yyjson.git", from: "0.5.0"),
+        .package(url: "https://github.com/marcprux/universal.git", branch: "main"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "Ontology"),
+            name: "Ontology",
+            dependencies: [
+                .product(name: "Period", package: "period"),
+                .product(name: "YYJSON", package: "swift-yyjson"),
+                .product(name: "Universal", package: "universal"),
+            ]
+        ),
+        .target(
+            name: "OntologyApple",
+            dependencies: ["Ontology"]
+        ),
+        .target(
+            name: "OntologyOKF",
+            dependencies: [
+                .target(name: "Ontology"),
+                .product(name: "Universal", package: "universal"),
+            ]
+        ),
         .target(
             name: "Presentation",
             dependencies: [
-                "Ontology",
+                "OntologyApple",
                 .product(name: "Period", package: "period"),
             ]
         ),
         .testTarget(
             name: "OntologyTests",
-            dependencies: ["Ontology"]
+            dependencies: ["Ontology", "OntologyApple", "OntologyOKF"]
         ),
     ]
 )

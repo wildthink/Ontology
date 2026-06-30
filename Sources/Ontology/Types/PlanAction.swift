@@ -1,4 +1,9 @@
-/// A PlanAction model following Schema.org ontology (https://schema.org/PlanAction)
+import Foundation
+
+/// A PlanAction model following Schema.org ontology (https://schema.org/PlanAction).
+///
+/// - Important: Use `Plan` for new code. `PlanAction` remains for migration only.
+@available(*, deprecated, renamed: "Plan")
 public struct PlanAction: Hashable, Sendable {
     /// Unique identifier for the plan action
     public var identifier: String?
@@ -46,27 +51,6 @@ public struct PlanAction: Hashable, Sendable {
         self.status = completed ? .completed : .potential
     }
 }
-
-#if canImport(EventKit)
-    import EventKit
-
-    extension PlanAction {
-        /// Initialize a PlanAction with an EventKit reminder
-        public init(_ reminder: EKReminder) {
-            self.name = reminder.title
-            self.description = reminder.notes
-            if let dueDate = reminder.dueDateComponents?.date {
-                self.scheduledTime = DateTime(dueDate)
-            }
-            self.status = reminder.isCompleted ? .completed : .potential
-            self.priority = reminder.priority > 0 ? reminder.priority : nil
-            self.url = reminder.url
-            if let calendar = reminder.calendar {
-                self.object = ItemList(calendar)
-            }
-        }
-    }
-#endif
 
 extension PlanAction: Codable {
     private enum CodingKeys: String, CodingKey {

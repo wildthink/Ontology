@@ -14,22 +14,21 @@ public struct PostalAddress: Hashable, Sendable {
 
     /// The country
     public var addressCountry: String?
-}
 
-#if canImport(Contacts)
-    import Contacts
-
-    extension PostalAddress {
-        /// Initialize a PostalAddress from a CNPostalAddress
-        public init(_ address: CNPostalAddress) {
-            streetAddress = address.street.isEmpty ? nil : address.street
-            addressLocality = address.city.isEmpty ? nil : address.city
-            addressRegion = address.state.isEmpty ? nil : address.state
-            postalCode = address.postalCode.isEmpty ? nil : address.postalCode
-            addressCountry = address.country.isEmpty ? nil : address.country
-        }
+    public init(
+        streetAddress: String? = nil,
+        addressLocality: String? = nil,
+        addressRegion: String? = nil,
+        postalCode: String? = nil,
+        addressCountry: String? = nil
+    ) {
+        self.streetAddress = streetAddress
+        self.addressLocality = addressLocality
+        self.addressRegion = addressRegion
+        self.postalCode = postalCode
+        self.addressCountry = addressCountry
     }
-#endif
+}
 
 extension PostalAddress: Codable {
     private enum CodingKeys: String, CodingKey {
@@ -58,15 +57,16 @@ extension PostalAddress: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        // Verify type is correct
-        let describedType = String(describing: Self.self)
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == describedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
+        // Validate @type when present (absent in frontmatter contexts)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type) {
+            let describedType = String(describing: Self.self)
+            guard decodedType == describedType else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+                )
+            }
         }
 
         // Decode properties

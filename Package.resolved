@@ -1,0 +1,33 @@
+{
+  "originHash" : "f63f7bbd59014defabf1cdac8afbd9a2cdae752955cbbf3a7b650a6c3fa7c6ea",
+  "pins" : [
+    {
+      "identity" : "period",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/davdroman/Period.git",
+      "state" : {
+        "revision" : "814bc0fce41a273b6fe1cf8966f7d23e77d60d7c",
+        "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-yyjson",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mattt/swift-yyjson.git",
+      "state" : {
+        "revision" : "6514373242de8a0765556dc54efdfd8a9567d71a",
+        "version" : "0.5.0"
+      }
+    },
+    {
+      "identity" : "universal",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/marcprux/universal.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "fa8f84b2d8f452ce152578bb3860f21d287433b4"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -71,11 +71,9 @@ extension QuantitativeValue: Codable {
     }
 }
 
-#if canImport(Foundation)
-    import Foundation
+import Foundation
 
-    // Measurement conversion
-    extension QuantitativeValue {
+extension QuantitativeValue {
         private static func unCefactMapping<UnitType: Dimension>(for type: UnitType.Type) -> (
             code: String, text: String, baseUnit: UnitType
         )? {
@@ -151,4 +149,4 @@ extension QuantitativeValue: Codable {
             return Measurement(value: value, unit: mapping.baseUnit)
         }
     }
-#endif
+

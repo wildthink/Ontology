@@ -8,7 +8,7 @@
 public struct Taxon: Identifiable,
                      Sendable, Hashable, Equatable
 {
-    public typealias Representation = Char10
+    public typealias Representation = String // Char10
     
     public var id: Int { hashValue }
     public let representation: Representation
@@ -28,13 +28,18 @@ public extension Taxon {
 
     static let event: Taxon = "event"
     static let topic: Taxon = "topic"
+
+    static let plan: Taxon = "plan"
+    static let occurrence: Taxon = "occurrence"
+    static let record: Taxon = "record"
+    static let collection: Taxon = "collection"
 }
 
 extension Taxon: Codable {
    public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(String.self)
-        self.representation = Word64(stringLiteral: value)
+        self.representation = value // Word64(stringLiteral: value)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -43,15 +48,15 @@ extension Taxon: Codable {
     }
 }
 
-extension Taxon: CustomStringConvertible {
+extension Taxon: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
-        self.representation = Word64(stringLiteral: value)
+        self.representation = value
     }
 }
 
-extension Taxon: ExpressibleByStringLiteral {
+extension Taxon: CustomStringConvertible {
     public var description: String {
-        representation.description
+        representation
     }
 }
 

@@ -24,33 +24,24 @@ public struct WeatherConditions: Hashable, Sendable {
     /// The probability of precipitation during the hour.
     /// The value is from 0 (0% probability) to 1 (100% probability)
     public var precipitationChance: Double?
-}
-
-#if canImport(WeatherKit)
-    import WeatherKit
-    extension WeatherConditions {
-        /// Initialize weather conditions from a CurrentWeather instance
-        public init(_ current: CurrentWeather) {
-            self.dateTime = current.date
-            self.temperature = current.temperature
-            self.apparentTemperature = current.apparentTemperature
-            self.windSpeed = current.wind.speed
-            self.humidity = current.humidity
-            self.condition = current.condition.description
-        }
-
-        /// Initialize weather conditions from an HourWeather instance
-        public init(_ forecast: HourWeather) {
-            self.dateTime = forecast.date
-            self.temperature = forecast.temperature
-            self.apparentTemperature = forecast.apparentTemperature
-            self.humidity = forecast.humidity
-            self.windSpeed = forecast.wind.speed
-            self.condition = forecast.condition.description
-            self.precipitationChance = forecast.precipitationChance
-        }
+    public init(
+        dateTime: Date,
+        temperature: Measurement<UnitTemperature>,
+        apparentTemperature: Measurement<UnitTemperature>,
+        windSpeed: Measurement<UnitSpeed>,
+        humidity: Double,
+        condition: String,
+        precipitationChance: Double? = nil
+    ) {
+        self.dateTime = dateTime
+        self.temperature = temperature
+        self.apparentTemperature = apparentTemperature
+        self.windSpeed = windSpeed
+        self.humidity = humidity
+        self.condition = condition
+        self.precipitationChance = precipitationChance
     }
-#endif
+}
 
 // Conform to Codable for JSON-LD serialization
 extension WeatherConditions: Codable {

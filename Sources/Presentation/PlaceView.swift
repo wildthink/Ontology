@@ -7,7 +7,7 @@
 
 import SwiftUI
 import MapKit
-import Ontology
+import OntologyApple
 
 // TODO: Map Lookaround
 
@@ -21,7 +21,7 @@ public struct PlaceView: View {
     }
     
     public var body: some View {
-        if let cord = place.coordinates {
+        if let cord = place.clCoordinate {
             let name = place.name ?? "?"
             VStack {
                 Map {

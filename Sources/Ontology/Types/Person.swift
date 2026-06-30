@@ -1,44 +1,46 @@
+import Foundation
+
 /// A Person model following Schema.org ontology (https://schema.org/Person)
 public struct Person: Hashable, Sendable {
     /// Unique identifier for the person
     public var identifier: String?
-
+    
     /// Given name (first name) of the person
     public var givenName: String?
-
+    
     /// Family name (last name) of the person
     public var familyName: String?
-
+    
     /// Email addresses associated with the person
     public var email: [String]?
-
+    
     /// Telephone numbers associated with the person
     public var telephone: [String]?
-
+    
     /// Physical addresses associated with the person
     public var address: [PostalAddress]?
-
+    
     /// Job title of the person
     public var jobTitle: String?
-
+    
     /// Organization the person works for
     public var worksFor: Organization?
-
+    
     /// URLs associated with the person (e.g. websites, profiles)
     public var url: [String]?
-
+    
     /// Date of birth in ISO 8601 format (YYYY-MM-DD)
     public var birthDate: String?
-
+    
     /// Social profile URLs for the person
     public var sameAs: [String]?
-
+    
     /// Contact points (e.g. instant messaging)
     public var contactPoint: [ContactPoint]?
-
+    
     /// Languages known by the person (ISO language codes)
     public var knowsLanguage: [String]?
-
+    
     /// Family relationships
     public var spouse: [Person]?
     public var children: [Person]?
@@ -46,157 +48,72 @@ public struct Person: Hashable, Sendable {
     public var parents: [Person]?
     public var relatedTo: [Person]?
 
-    /// Initialize a Person with just a name
-    public init(name: String) {
+    public init(
+        identifier: String? = nil,
+        givenName: String? = nil,
+        familyName: String? = nil,
+        email: [String]? = nil,
+        telephone: [String]? = nil,
+        address: [PostalAddress]? = nil,
+        jobTitle: String? = nil,
+        worksFor: Organization? = nil,
+        url: [String]? = nil,
+        birthDate: String? = nil,
+        sameAs: [String]? = nil,
+        contactPoint: [ContactPoint]? = nil,
+        knowsLanguage: [String]? = nil,
+        spouse: [Person]? = nil,
+        children: [Person]? = nil,
+        siblings: [Person]? = nil,
+        parents: [Person]? = nil,
+        relatedTo: [Person]? = nil
+    ) {
+        self.identifier = identifier
+        self.givenName = givenName
+        self.familyName = familyName
+        self.email = email
+        self.telephone = telephone
+        self.address = address
+        self.jobTitle = jobTitle
+        self.worksFor = worksFor
+        self.url = url
+        self.birthDate = birthDate
+        self.sameAs = sameAs
+        self.contactPoint = contactPoint
+        self.knowsLanguage = knowsLanguage
+        self.spouse = spouse
+        self.children = children
+        self.siblings = siblings
+        self.parents = parents
+        self.relatedTo = relatedTo
+    }
+}
+
+public extension Person {
+    /// Initialize a Person by parsing a full name string.
+    init(name: String) {
         let formatter = PersonNameComponentsFormatter()
         if let components = formatter.personNameComponents(from: name) {
-            self.givenName = components.givenName
-            self.familyName = components.familyName
+            self.init(givenName: components.givenName, familyName: components.familyName)
         } else {
-            let components = name.components(separatedBy: " ")
-            if components.count >= 2 {
-                self.givenName = components[0]
-                self.familyName = components.last
+            let parts = name.components(separatedBy: " ")
+            if parts.count >= 2 {
+                self.init(givenName: parts[0], familyName: parts.last)
             } else {
-                self.givenName = components[0]
-                self.familyName = nil
+                self.init(givenName: parts[0])
             }
         }
     }
 }
 
-#if canImport(Contacts)
-    import Contacts
-
-    extension Person {
-
-        /// Initialize a Person from a CNContact
-        public init?(_ contact: CNContact) {
-            guard contact.contactType == .person else { return nil }
-
-            identifier = contact.identifier
-            givenName = contact.givenName.isEmpty ? nil : contact.givenName
-            familyName = contact.familyName.isEmpty ? nil : contact.familyName
-            email =
-                contact.emailAddresses.isEmpty
-                ? nil : contact.emailAddresses.map { $0.value as String }
-            telephone =
-                contact.phoneNumbers.isEmpty
-                ? nil : contact.phoneNumbers.map { $0.value.stringValue }
-
-            // Convert postal addresses
-            if !contact.postalAddresses.isEmpty {
-                address = contact.postalAddresses.map { PostalAddress($0.value) }
-            } else {
-                address = nil
-            }
-
-            // Job info
-            jobTitle = contact.jobTitle.isEmpty ? nil : contact.jobTitle
-            if !contact.organizationName.isEmpty {
-                worksFor = Organization(name: contact.organizationName)
-            } else {
-                worksFor = nil
-            }
-
-            // URLs
-            url =
-                contact.urlAddresses.isEmpty ? nil : contact.urlAddresses.map { $0.value as String }
-
-            // Birthday
-            if let birthday = contact.birthday {
-                var dateComponents = DateComponents()
-                dateComponents.year = birthday.year
-                dateComponents.month = birthday.month
-                dateComponents.day = birthday.day
-                if let date = Calendar.current.date(from: dateComponents) {
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyy-MM-dd"
-                    birthDate = formatter.string(from: date)
-                } else {
-                    birthDate = nil
-                }
-            } else {
-                birthDate = nil
-            }
-
-            // Social profiles
-            sameAs =
-                contact.socialProfiles.isEmpty
-                ? nil : contact.socialProfiles.map { $0.value.urlString }
-
-            // Instant messaging
-            if !contact.instantMessageAddresses.isEmpty {
-                contactPoint = contact.instantMessageAddresses.map { ContactPoint($0.value) }
-            } else {
-                contactPoint = nil
-            }
-
-            // Relations
-            var spouses: [Person] = []
-            var siblings: [Person] = []
-            var children: [Person] = []
-            var parents: [Person] = []
-            var others: [Person] = []
-
-            for relation in contact.contactRelations {
-                let person = Person(name: relation.value.name)
-
-                outer: if #available(macOS 15.0, iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-                    switch relation.label {
-                    case CNLabelContactRelationFemalePartner,
-                        CNLabelContactRelationHusband,
-                        CNLabelContactRelationMalePartner,
-                        CNLabelContactRelationPartner,
-                        CNLabelContactRelationWife:
-                        spouses.append(person)
-                    case CNLabelContactRelationElderBrother,
-                        CNLabelContactRelationElderSibling,
-                        CNLabelContactRelationElderSister,
-                        CNLabelContactRelationEldestBrother,
-                        CNLabelContactRelationEldestSister,
-                        CNLabelContactRelationYoungerBrother,
-                        CNLabelContactRelationYoungerSibling,
-                        CNLabelContactRelationYoungerSibling,
-                        CNLabelContactRelationYoungerSister,
-                        CNLabelContactRelationYoungestBrother,
-                        CNLabelContactRelationYoungestSister,
-                        CNLabelContactRelationSibling:
-                        siblings.append(person)
-                    default:
-                        break outer
-                    }
-
-                    continue
-                }
-
-                switch relation.label {
-                case CNLabelContactRelationSpouse:
-                    spouses.append(person)
-                case CNLabelContactRelationBrother,
-                    CNLabelContactRelationSister:
-                    siblings.append(person)
-                case CNLabelContactRelationChild,
-                    CNLabelContactRelationSon,
-                    CNLabelContactRelationDaughter:
-                    children.append(person)
-                case CNLabelContactRelationParent,
-                    CNLabelContactRelationMother,
-                    CNLabelContactRelationFather:
-                    parents.append(person)
-                default:
-                    others.append(person)
-                }
-            }
-
-            self.spouse = spouses.isEmpty ? nil : spouses
-            self.siblings = siblings.isEmpty ? nil : siblings
-            self.children = children.isEmpty ? nil : children
-            self.parents = parents.isEmpty ? nil : parents
-            self.relatedTo = others.isEmpty ? nil : others
-        }
+public extension Person {
+    var personName: PersonNameComponents {
+        PersonNameComponents(
+            givenName: self.givenName,
+            familyName: self.familyName
+        )
     }
-#endif
+}
 
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
@@ -205,21 +122,21 @@ extension Person: Codable {
         case contactPoint, knowsLanguage, preferences
         case spouse, children, siblings, parents, relatedTo
     }
-
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
+        
         // Encode @context if we're at the root level (empty coding path)
         if encoder.codingPath.isEmpty {
             try container.encode(schema.org, forKey: .context)
         }
-
+        
         // Encode @type
         try container.encode(String(describing: Self.self), forKey: .type)
-
+        
         // Encode @id
         try container.encodeIfPresent(identifier, forKey: .id)
-
+        
         // Encode properties
         try container.encodeIfPresent(givenName, forKey: .attribute(.givenName))
         try container.encodeIfPresent(familyName, forKey: .attribute(.familyName))
@@ -239,24 +156,24 @@ extension Person: Codable {
         try container.encodeIfPresent(parents, forKey: .attribute(.parents))
         try container.encodeIfPresent(relatedTo, forKey: .attribute(.relatedTo))
     }
-
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Verify type is correct
-        let describedType = String(describing: Self.self)
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == describedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
+        
+        // Validate @type when present (absent in frontmatter contexts)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type) {
+            let describedType = String(describing: Self.self)
+            guard decodedType == describedType else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+                )
+            }
         }
 
-        // Decode @id
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
-
+        
         givenName = try container.decodeIfPresent(String.self, forKey: .attribute(.givenName))
         familyName = try container.decodeIfPresent(String.self, forKey: .attribute(.familyName))
         email = try container.decodeIfPresent([String].self, forKey: .attribute(.email))

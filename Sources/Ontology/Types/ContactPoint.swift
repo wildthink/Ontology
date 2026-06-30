@@ -1,23 +1,13 @@
 /// A contact point following Schema.org ontology
 public struct ContactPoint: Hashable, Sendable {
-    /// The type of contact point
     public var contactType: String
-
-    /// The identifier of the contact point
     public var identifier: String
-}
 
-#if canImport(Contacts)
-    import Contacts
-
-    extension ContactPoint {
-        /// Initialize a ContactPoint from a CNInstantMessageAddress
-        public init(_ im: CNInstantMessageAddress) {
-            contactType = im.service
-            identifier = im.username
-        }
+    public init(contactType: String, identifier: String) {
+        self.contactType = contactType
+        self.identifier = identifier
     }
-#endif
+}
 
 extension ContactPoint: Codable {
     private enum CodingKeys: String, CodingKey {
@@ -43,15 +33,16 @@ extension ContactPoint: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        // Verify type is correct
-        let describedType = String(describing: Self.self)
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == describedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
+        // Validate @type when present (absent in frontmatter contexts)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type) {
+            let describedType = String(describing: Self.self)
+            guard decodedType == describedType else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .type,
+                    in: container,
+                    debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+                )
+            }
         }
 
         // Decode properties

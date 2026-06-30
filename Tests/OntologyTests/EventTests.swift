@@ -1,90 +1,82 @@
 import EventKit
 import Foundation
+import OntologyApple
 import Testing
 
 @testable import Ontology
 
 @Suite
-struct EventTests {
-    @Test("Event initialization preserves basic properties")
-    func testBasicProperties() throws {
-        let eventStore = EKEventStore()
-        let event = EKEvent(eventStore: eventStore)
+struct OccurrenceBridgeTests {
+    @Test("Occurrence preserves basic EKEvent properties")
+    func testBasicProperties() {
+        let store = EKEventStore()
+        let ek = EKEvent(eventStore: store)
+        ek.title = "Test Event"
+        ek.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        ek.endDate = Date(timeIntervalSinceReferenceDate: 3600)
 
-        event.title = "Test Event"
-        event.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        event.endDate = Date(timeIntervalSinceReferenceDate: 3600)
+        let occ = Occurrence(ek)
 
-        let ontologyEvent = Event(event)
-
-        #expect(ontologyEvent.name == "Test Event")
-        #expect(ontologyEvent.startDate?.value == Date(timeIntervalSinceReferenceDate: 0))
-        #expect(ontologyEvent.endDate?.value == Date(timeIntervalSinceReferenceDate: 3600))
+        #expect(occ.name == "Test Event")
+        #expect(occ.startDate?.value == Date(timeIntervalSinceReferenceDate: 0))
+        #expect(occ.endDate?.value == Date(timeIntervalSinceReferenceDate: 3600))
     }
 
-    @Test("Event initialization preserves timezone information")
-    func testTimezonePreservation() throws {
-        let eventStore = EKEventStore()
-        let event = EKEvent(eventStore: eventStore)
+    @Test("Occurrence preserves timezone from EKEvent")
+    func testTimezonePreservation() {
+        let store = EKEventStore()
+        let ek = EKEvent(eventStore: store)
+        ek.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        ek.endDate = Date(timeIntervalSinceReferenceDate: 3600)
+        ek.timeZone = TimeZone(identifier: "America/New_York")!
 
-        event.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        event.endDate = Date(timeIntervalSinceReferenceDate: 3600)
-        event.timeZone = TimeZone(identifier: "America/New_York")!
+        let occ = Occurrence(ek)
 
-        let ontologyEvent = Event(event)
-
-        #expect(ontologyEvent.startDate?.timeZone?.identifier == "America/New_York")
-        #expect(ontologyEvent.endDate?.timeZone?.identifier == "America/New_York")
+        #expect(occ.startDate?.timeZone?.identifier == "America/New_York")
+        #expect(occ.endDate?.timeZone?.identifier == "America/New_York")
     }
 
-    @Test("Event initialization handles optional properties")
-    func testOptionalProperties() throws {
-        let eventStore = EKEventStore()
-        let event = EKEvent(eventStore: eventStore)
+    @Test("Occurrence captures optional EKEvent fields")
+    func testOptionalProperties() {
+        let store = EKEventStore()
+        let ek = EKEvent(eventStore: store)
+        ek.title = "Test Event"
+        ek.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        ek.endDate = Date(timeIntervalSinceReferenceDate: 3600)
+        ek.location = "123 Test Street"
+        ek.url = URL(string: "https://example.com")
 
-        event.title = "Test Event"
-        event.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        event.endDate = Date(timeIntervalSinceReferenceDate: 3600)
-        event.location = "123 Test Street"
-        event.url = URL(string: "https://example.com")
+        let occ = Occurrence(ek)
 
-        let ontologyEvent = Event(event)
+        #expect(occ.location == "123 Test Street")
+        #expect(occ.url?.absoluteString == "https://example.com")
 
-        #expect(ontologyEvent.location == "123 Test Street")
-        #expect(ontologyEvent.url?.absoluteString == "https://example.com")
+        let empty = EKEvent(eventStore: store)
+        empty.title = "Minimal"
+        empty.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        empty.endDate = Date(timeIntervalSinceReferenceDate: 3600)
 
-        // Test with nil properties
-        let emptyEvent = EKEvent(eventStore: eventStore)
-        emptyEvent.title = "Minimal Event"
-        emptyEvent.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        emptyEvent.endDate = Date(timeIntervalSinceReferenceDate: 3600)
-
-        let minimalEvent = Event(emptyEvent)
-
-        #expect(minimalEvent.location == nil)
-        #expect(minimalEvent.url == nil)
+        let minimal = Occurrence(empty)
+        #expect(minimal.location == nil)
+        #expect(minimal.url == nil)
     }
 
-    @Test("Event JSON-LD encoding preserves all properties")
+    @Test("Occurrence JSON-LD encoding has correct type and fields")
     func testJSONLDEncoding() throws {
-        let eventStore = EKEventStore()
-        let event = EKEvent(eventStore: eventStore)
+        let store = EKEventStore()
+        let ek = EKEvent(eventStore: store)
+        ek.title = "NYE"
+        ek.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        ek.endDate = Date(timeIntervalSinceReferenceDate: 3600 * 5)
+        ek.timeZone = TimeZone(identifier: "America/New_York")!
+        ek.location = "1550 Broadway, New York, NY 10036"
+        ek.url = URL(string: "https://example.com")
 
-        event.title = "NYE"
-        event.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        event.endDate = Date(timeIntervalSinceReferenceDate: 3600 * 5)
-        event.timeZone = TimeZone(identifier: "America/New_York")!
-        event.location = "1550 Broadway, New York, NY 10036"
-        event.url = URL(string: "https://example.com")
-
-        let ontologyEvent = Event(event)
-
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(ontologyEvent)
+        let data = try JSONEncoder().encode(Occurrence(ek))
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
         #expect(json["@context"] as? String == "https://schema.org")
-        #expect(json["@type"] as? String == "Event")
+        #expect(json["@type"] as? String == "Occurrence")
         #expect(json["name"] as? String == "NYE")
         #expect(json["location"] as? String == "1550 Broadway, New York, NY 10036")
         #expect(json["url"] as? String == "https://example.com")
@@ -92,25 +84,23 @@ struct EventTests {
         #expect(json["endDate"] as? String == "2001-01-01T00:00:00.000-05:00")
     }
 
-    @Test("Event round-trip serialization preserves data")
-    func testRoundTripSerialization() throws {
-        let eventStore = EKEventStore()
-        let event = EKEvent(eventStore: eventStore)
+    @Test("Occurrence JSON-LD round-trip preserves data")
+    func testRoundTrip() throws {
+        let store = EKEventStore()
+        let ek = EKEvent(eventStore: store)
+        ek.title = "Test Event"
+        ek.startDate = Date(timeIntervalSinceReferenceDate: 0)
+        ek.endDate = Date(timeIntervalSinceReferenceDate: 3600)
+        ek.timeZone = TimeZone(identifier: "America/Los_Angeles")!
 
-        event.title = "Test Event"
-        event.startDate = Date(timeIntervalSinceReferenceDate: 0)
-        event.endDate = Date(timeIntervalSinceReferenceDate: 3600)
-        event.timeZone = TimeZone(identifier: "America/Los_Angeles")!
-
-        let original = Event(event)
-        let encoder = JSONEncoder()
-        let encoded = try encoder.encode(original)
-        let decoded = try JSONDecoder().decode(Event.self, from: encoded)
+        let original = Occurrence(ek)
+        let encoded = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(Occurrence.self, from: encoded)
 
         #expect(decoded.name == original.name)
         #expect(decoded.startDate?.value == original.startDate?.value)
         #expect(decoded.endDate?.value == original.endDate?.value)
-        #expect(decoded.startDate?.timeZone?.secondsFromGMT() == (-8 * 3600))
-        #expect(decoded.endDate?.timeZone?.secondsFromGMT() == (-8 * 3600))
+        #expect(decoded.startDate?.timeZone?.secondsFromGMT() == -8 * 3600)
+        #expect(decoded.endDate?.timeZone?.secondsFromGMT() == -8 * 3600)
     }
 }
