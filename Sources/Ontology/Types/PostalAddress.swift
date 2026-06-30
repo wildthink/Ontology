@@ -30,21 +30,6 @@ public struct PostalAddress: Hashable, Sendable {
     }
 }
 
-#if canImport(Contacts)
-    import Contacts
-
-    extension PostalAddress {
-        /// Initialize a PostalAddress from a CNPostalAddress
-        public init(_ address: CNPostalAddress) {
-            streetAddress = address.street.isEmpty ? nil : address.street
-            addressLocality = address.city.isEmpty ? nil : address.city
-            addressRegion = address.state.isEmpty ? nil : address.state
-            postalCode = address.postalCode.isEmpty ? nil : address.postalCode
-            addressCountry = address.country.isEmpty ? nil : address.country
-        }
-    }
-#endif
-
 extension PostalAddress: Codable {
     private enum CodingKeys: String, CodingKey {
         case streetAddress, addressLocality, addressRegion, postalCode, addressCountry

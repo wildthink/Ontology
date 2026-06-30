@@ -1,4 +1,3 @@
-import Contacts
 import Foundation
 
 /// An organization following Schema.org ontology
@@ -53,27 +52,6 @@ public struct Organization: Hashable, Sendable {
         self.metadata = [:]
     }
 }
-
-#if canImport(Contacts)
-    import Contacts
-
-    extension Organization {
-        /// Initialize an Organization from a CNContact
-        public init?(_ contact: CNContact) {
-            guard contact.contactType == .organization else { return nil }
-
-            self.init(
-                identifier: contact.identifier,
-                name: contact.organizationName.isEmpty ? nil : contact.organizationName,
-                address: contact.postalAddresses.isEmpty ? nil : contact.postalAddresses.map { PostalAddress($0.value) },
-                email: contact.emailAddresses.isEmpty ? nil : contact.emailAddresses.map { $0.value as String },
-                telephone: contact.phoneNumbers.isEmpty ? nil : contact.phoneNumbers.map { $0.value.stringValue },
-                url: contact.urlAddresses.isEmpty ? nil : contact.urlAddresses.map { $0.value as String },
-                metadata: ["apple.identifier": contact.identifier]
-            )
-        }
-    }
-#endif
 
 extension Organization: Codable {
     private enum CodingKeys: String, CodingKey {

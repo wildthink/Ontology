@@ -20,18 +20,6 @@ public struct ItemList: Hashable, Sendable {
     }
 }
 
-#if canImport(EventKit)
-    import EventKit
-
-    extension ItemList {
-        /// Initialize an ItemList from an EKCalendar
-        public init(_ calendar: EKCalendar) {
-            self.identifier = calendar.calendarIdentifier
-            self.name = calendar.title
-        }
-    }
-#endif
-
 extension ItemList: Codable {
     private enum CodingKeys: String, CodingKey {
         case name, url, numberOfItems

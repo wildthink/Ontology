@@ -6,28 +6,24 @@
 //
 
 import SwiftUI
+import Ontology
 
 struct AddressCard: View {
     let model: PostalAddress
-    
+
     var body: some View {
         Text("Hello, World!")
     }
 }
 
-#if canImport(Contacts)
-import Contacts
-// Localized AttributedString
-#endif
-
 struct PlaceCard: View {
     let model: Place
-    
+
     var body: some View {
         Text("Hello, World!")
     }
 }
 
 #Preview {
-    AddressCard()
+    AddressCard(model: PostalAddress())
 }

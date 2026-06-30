@@ -11,6 +11,9 @@ let package = Package(
             name: "Ontology",
             targets: ["Ontology"]),
         .library(
+            name: "OntologyApple",
+            targets: ["OntologyApple"]),
+        .library(
             name: "Presentation",
             targets: ["Presentation"]),
     ],
@@ -30,15 +33,19 @@ let package = Package(
             ]
         ),
         .target(
+            name: "OntologyApple",
+            dependencies: ["Ontology"]
+        ),
+        .target(
             name: "Presentation",
             dependencies: [
-                "Ontology",
+                "OntologyApple",
                 .product(name: "Period", package: "period"),
             ]
         ),
         .testTarget(
             name: "OntologyTests",
-            dependencies: ["Ontology"]
+            dependencies: ["Ontology", "OntologyApple"]
         ),
     ]
 )

@@ -1,3 +1,5 @@
+import Foundation
+
 /// A Person model following Schema.org ontology (https://schema.org/Person)
 public struct Person: Hashable, Sendable {
     /// Unique identifier for the person
@@ -45,21 +47,60 @@ public struct Person: Hashable, Sendable {
     public var siblings: [Person]?
     public var parents: [Person]?
     public var relatedTo: [Person]?
-    
-    /// Initialize a Person with just a name
-    public init(name: String) {
+
+    public init(
+        identifier: String? = nil,
+        givenName: String? = nil,
+        familyName: String? = nil,
+        email: [String]? = nil,
+        telephone: [String]? = nil,
+        address: [PostalAddress]? = nil,
+        jobTitle: String? = nil,
+        worksFor: Organization? = nil,
+        url: [String]? = nil,
+        birthDate: String? = nil,
+        sameAs: [String]? = nil,
+        contactPoint: [ContactPoint]? = nil,
+        knowsLanguage: [String]? = nil,
+        spouse: [Person]? = nil,
+        children: [Person]? = nil,
+        siblings: [Person]? = nil,
+        parents: [Person]? = nil,
+        relatedTo: [Person]? = nil
+    ) {
+        self.identifier = identifier
+        self.givenName = givenName
+        self.familyName = familyName
+        self.email = email
+        self.telephone = telephone
+        self.address = address
+        self.jobTitle = jobTitle
+        self.worksFor = worksFor
+        self.url = url
+        self.birthDate = birthDate
+        self.sameAs = sameAs
+        self.contactPoint = contactPoint
+        self.knowsLanguage = knowsLanguage
+        self.spouse = spouse
+        self.children = children
+        self.siblings = siblings
+        self.parents = parents
+        self.relatedTo = relatedTo
+    }
+}
+
+public extension Person {
+    /// Initialize a Person by parsing a full name string.
+    init(name: String) {
         let formatter = PersonNameComponentsFormatter()
         if let components = formatter.personNameComponents(from: name) {
-            self.givenName = components.givenName
-            self.familyName = components.familyName
+            self.init(givenName: components.givenName, familyName: components.familyName)
         } else {
-            let components = name.components(separatedBy: " ")
-            if components.count >= 2 {
-                self.givenName = components[0]
-                self.familyName = components.last
+            let parts = name.components(separatedBy: " ")
+            if parts.count >= 2 {
+                self.init(givenName: parts[0], familyName: parts.last)
             } else {
-                self.givenName = components[0]
-                self.familyName = nil
+                self.init(givenName: parts[0])
             }
         }
     }
@@ -73,139 +114,6 @@ public extension Person {
         )
     }
 }
-
-#if canImport(Contacts)
-import Contacts
-
-extension Person {
-    
-    /// Initialize a Person from a CNContact
-    public init?(_ contact: CNContact) {
-        guard contact.contactType == .person else { return nil }
-        
-        identifier = contact.identifier
-        givenName = contact.givenName.isEmpty ? nil : contact.givenName
-        familyName = contact.familyName.isEmpty ? nil : contact.familyName
-        email =
-            contact.emailAddresses.isEmpty
-            ? nil : contact.emailAddresses.map { $0.value as String }
-        telephone =
-            contact.phoneNumbers.isEmpty
-            ? nil : contact.phoneNumbers.map { $0.value.stringValue }
-        
-        // Convert postal addresses
-        if !contact.postalAddresses.isEmpty {
-            address = contact.postalAddresses.map { PostalAddress($0.value) }
-        } else {
-            address = nil
-        }
-        
-        // Job info
-        jobTitle = contact.jobTitle.isEmpty ? nil : contact.jobTitle
-        if !contact.organizationName.isEmpty {
-            worksFor = Organization(name: contact.organizationName)
-        } else {
-            worksFor = nil
-        }
-        
-        // URLs
-        url =
-            contact.urlAddresses.isEmpty ? nil : contact.urlAddresses.map { $0.value as String }
-        
-        // Birthday
-        if let birthday = contact.birthday {
-            var dateComponents = DateComponents()
-            dateComponents.year = birthday.year
-            dateComponents.month = birthday.month
-            dateComponents.day = birthday.day
-            if let date = Calendar.current.date(from: dateComponents) {
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                birthDate = formatter.string(from: date)
-            } else {
-                birthDate = nil
-            }
-        } else {
-            birthDate = nil
-        }
-        
-        // Social profiles
-        sameAs =
-            contact.socialProfiles.isEmpty
-            ? nil : contact.socialProfiles.map { $0.value.urlString }
-        
-        // Instant messaging
-        if !contact.instantMessageAddresses.isEmpty {
-            contactPoint = contact.instantMessageAddresses.map { ContactPoint($0.value) }
-        } else {
-            contactPoint = nil
-        }
-        
-        // Relations
-        var spouses: [Person] = []
-        var siblings: [Person] = []
-        var children: [Person] = []
-        var parents: [Person] = []
-        var others: [Person] = []
-        
-        for relation in contact.contactRelations {
-            let person = Person(name: relation.value.name)
-            
-            outer: if #available(macOS 15.0, iOS 13.0, tvOS 13.0, watchOS 6.0, *) {
-                switch relation.label {
-                case CNLabelContactRelationFemalePartner,
-                     CNLabelContactRelationHusband,
-                     CNLabelContactRelationMalePartner,
-                     CNLabelContactRelationPartner,
-                     CNLabelContactRelationWife:
-                    spouses.append(person)
-                case CNLabelContactRelationElderBrother,
-                     CNLabelContactRelationElderSibling,
-                     CNLabelContactRelationElderSister,
-                     CNLabelContactRelationEldestBrother,
-                     CNLabelContactRelationEldestSister,
-                     CNLabelContactRelationYoungerBrother,
-                     CNLabelContactRelationYoungerSibling,
-                     CNLabelContactRelationYoungerSibling,
-                     CNLabelContactRelationYoungerSister,
-                     CNLabelContactRelationYoungestBrother,
-                     CNLabelContactRelationYoungestSister,
-                     CNLabelContactRelationSibling:
-                    siblings.append(person)
-                default:
-                    break outer
-                }
-                
-                continue
-            }
-            
-            switch relation.label {
-            case CNLabelContactRelationSpouse:
-                spouses.append(person)
-            case CNLabelContactRelationBrother,
-                 CNLabelContactRelationSister:
-                siblings.append(person)
-            case CNLabelContactRelationChild,
-                 CNLabelContactRelationSon,
-                 CNLabelContactRelationDaughter:
-                children.append(person)
-            case CNLabelContactRelationParent,
-                 CNLabelContactRelationMother,
-                 CNLabelContactRelationFather:
-                parents.append(person)
-            default:
-                others.append(person)
-            }
-        }
-        
-        self.spouse = spouses.isEmpty ? nil : spouses
-        self.siblings = siblings.isEmpty ? nil : siblings
-        self.children = children.isEmpty ? nil : children
-        self.parents = parents.isEmpty ? nil : parents
-        self.relatedTo = others.isEmpty ? nil : others
-    }
-}
-#endif
 
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {

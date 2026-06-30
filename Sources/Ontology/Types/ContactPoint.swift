@@ -1,23 +1,13 @@
 /// A contact point following Schema.org ontology
 public struct ContactPoint: Hashable, Sendable {
-    /// The type of contact point
     public var contactType: String
-
-    /// The identifier of the contact point
     public var identifier: String
-}
 
-#if canImport(Contacts)
-    import Contacts
-
-    extension ContactPoint {
-        /// Initialize a ContactPoint from a CNInstantMessageAddress
-        public init(_ im: CNInstantMessageAddress) {
-            contactType = im.service
-            identifier = im.username
-        }
+    public init(contactType: String, identifier: String) {
+        self.contactType = contactType
+        self.identifier = identifier
     }
-#endif
+}
 
 extension ContactPoint: Codable {
     private enum CodingKeys: String, CodingKey {
