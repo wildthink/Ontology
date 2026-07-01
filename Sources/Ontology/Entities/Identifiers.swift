@@ -77,6 +77,31 @@ extension Commitment: SchemaEntityReference {
 }
 extension Commitment: Entity {}
 
+extension Outline: SchemaEntityReference {
+    public static var taxon: Taxon { .outline }
+}
+extension Outline: Entity {}
+
+extension Topic: SchemaEntityReference {
+    public static var taxon: Taxon { .topic }
+}
+extension Topic: Entity {}
+
+extension Relationship: SchemaEntityReference {
+    public static var taxon: Taxon { .relationship }
+}
+extension Relationship: Entity {}
+
+extension Artifact: SchemaEntityReference {
+    public static var taxon: Taxon { .artifact }
+}
+extension Artifact: Entity {}
+
+extension Media: SchemaEntityReference {
+    public static var taxon: Taxon { .media }
+}
+extension Media: Entity {}
+
 // MARK: - Deprecated type conformances
 
 @available(*, deprecated, renamed: "Occurrence")

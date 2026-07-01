@@ -45,8 +45,14 @@ Every meaningful concept is a **Holon** — simultaneously a whole thing in itse
 | `Organization` | A group, faction, institution | Yes |
 | `Place` | A named location with description | Yes |
 | `Collection` | A logical grouping of HolonRefs | Yes (`_index.md`) |
+| `Outline` | A hierarchical catalog/table of contents: an ordered tree of `OutlineNode`s | Yes |
+| `Topic` | A subject/theme with its own identity, referenced from other entities | Yes |
+| `Relationship` | Standing social structure between two actors (rivalry, mentorship, membership) — independent of any Plan, unlike `Commitment` | Yes |
+| `Artifact` | An in-fiction object with identity — a prop, weapon, document, possession | Yes |
+| `Media` | A reference to an external/local image, video, or audio file, with caption/credit/format metadata. Not an in-fiction object — see `Artifact` | Yes |
 | `RRule` | Recurrence pattern — embedded inside a `Plan`, never standalone | No |
 | `Alarm` | Notification trigger embedded in Plan/Occurrence/Task | No |
+| `OutlineNode` | A node in an `Outline` — title + optional `HolonRef` + note/tags + children | No |
 | `DateTime`, `GeoCoordinates`, `QuantitativeValue` | Value types embedded in parent frontmatter | No |
 | Weather types | Transient sensor data, no narrative | No |
 
@@ -105,7 +111,8 @@ All static Taxon constants are declared in `Taxon.swift`. Current set:
 
 ```swift
 .anything, .agent, .person, .org, .place, .event, .topic,
-.plan, .occurrence, .record, .collection, .task, .commitment
+.plan, .occurrence, .record, .collection, .task, .commitment, .outline,
+.relationship, .artifact, .media
 ```
 
 ### Module structure

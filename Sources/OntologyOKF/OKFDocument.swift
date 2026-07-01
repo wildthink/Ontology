@@ -5,6 +5,11 @@ import Universal
 /// OKF key order: required first, then recommended, then extensions.
 private let okfKeyPriority = ["type", "title", "description", "resource", "tags", "timestamp", "id"]
 
+/// Hub date fields that back the OKF `timestamp` field, in precedence order.
+/// Shared by `OKFDocument` (write: pick the first present field) and `OKFReader`
+/// (read: write an edited `timestamp` back into whichever field supplied it).
+let okfDateFields = ["startDate", "endDate", "dueDate", "recordedAt", "scheduledTime"]
+
 /// An OKF v0.1-compliant markdown document produced from a hub `Entity`.
 ///
 /// Key mapping (hub → OKF):
@@ -79,9 +84,8 @@ private extension OKFDocument {
         }
 
         // timestamp — first available date field
-        let dateFields = ["startDate", "endDate", "recordedAt", "scheduledTime"]
         if obj["timestamp"] == nil {
-            for field in dateFields {
+            for field in okfDateFields {
                 if let d = obj[field], !d.isNull {
                     obj["timestamp"] = d
                     break
@@ -89,12 +93,22 @@ private extension OKFDocument {
             }
         }
 
-        // Recursively process nested objects; drop nulls
+        // Recursively process nested objects and arrays (e.g. Outline.nodes); drop nulls
         let cleaned = obj.compactMapValues { value -> JSON? in
             guard !value.isNull else { return nil }
-            if value.object != nil { return okfObject(from: value) }
-            return value
+            return okfValue(value)
         }
         return .object(cleaned)
+    }
+
+    /// Applies `okfObject` transformation through objects and arrays of objects,
+    /// so nested entities (e.g. `OutlineNode` inside `Outline.nodes`) also get
+    /// their `@type`/`@id` stripped instead of leaking raw JSON-LD keys into YAML.
+    static func okfValue(_ value: JSON) -> JSON {
+        if value.object != nil { return okfObject(from: value) }
+        if let arr = value.array {
+            return .array(arr.compactMap { $0.isNull ? nil : okfValue($0) })
+        }
+        return value
     }
 }
