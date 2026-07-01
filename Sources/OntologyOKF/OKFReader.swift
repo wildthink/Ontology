@@ -5,12 +5,17 @@ import Universal
 /// Decodes OKF v0.1 markdown documents into hub `Entity` types.
 ///
 /// Key mapping (OKF → hub):
-/// - `type`     → dropped (used externally to select target type)
-/// - `id`       → `@id`
-/// - `title`    → `name` (if `name` not already present)
-/// - `resource` → `url`  (if `url` not already present)
-/// - `timestamp` → dropped
+/// - `type`      → dropped (used externally to select target type)
+/// - `id`        → `@id`
+/// - `title`     → `name` (always wins over a stale `name` extension key)
+/// - `resource`  → `url` (always wins over a stale `url` extension key)
+/// - `timestamp` → written back into whichever `okfDateFields` entry supplied
+///   it (always wins over that field's stale value), then dropped
 /// - All other keys pass through to the hub type's decoder.
+///
+/// The OKF-native fields (`title`, `resource`, `timestamp`) are always treated
+/// as authoritative over their hub-side echoes, since they're what a human or
+/// tool editing the file at rest would actually change.
 public enum OKFReader {
 
     /// Decode an OKF document string into a hub entity type.
@@ -47,25 +52,40 @@ public enum OKFReader {
             obj.removeValue(forKey: "id")
         }
 
-        // title → name (only if name is absent; keeps extension fields intact)
-        if obj["name"] == nil, let title = obj["title"] {
+        // title is the OKF at-rest canonical field — it wins over a stale `name`
+        // extension key (e.g. if a file was hand-edited after being written).
+        if let title = obj["title"] {
             obj["name"] = title
         }
         obj.removeValue(forKey: "title")
 
-        // resource → url (only if url is absent)
-        if obj["url"] == nil, let resource = obj["resource"] {
+        // resource is the OKF at-rest canonical field — it wins over a stale
+        // `url` extension key.
+        if let resource = obj["resource"] {
             obj["url"] = resource
         }
         obj.removeValue(forKey: "resource")
 
-        // timestamp — no generic timestamp field on hub types; drop it
+        // timestamp is the OKF at-rest canonical field — it wins over whichever
+        // underlying hub date field originally derived it (first match in
+        // okfDateFields, mirroring the precedence OKFDocument uses to derive it).
+        if let timestamp = obj["timestamp"] {
+            if let field = okfDateFields.first(where: { obj[$0] != nil }) {
+                obj[field] = timestamp
+            }
+        }
         obj.removeValue(forKey: "timestamp")
 
         // taxon — drop (FrontmatterParser already strips this, but be explicit)
         obj.removeValue(forKey: "taxon")
 
-        // Recurse into nested objects
+        // Recurse into nested objects only — NOT into arrays. Array elements
+        // (e.g. `Outline.nodes` / `OutlineNode.children`) are nested value
+        // types with their own field named `title`, and running the title/
+        // resource/timestamp remapping above on them would corrupt those
+        // fields. `OKFDocument`'s write-side equivalent does recurse into
+        // arrays (it only needs to strip `@type`/`@id`, not remap fields), so
+        // don't "fix" this asymmetry without re-checking that reasoning.
         return .object(obj.mapValues { value -> JSON in
             guard value.object != nil else { return value }
             return normalized(value)

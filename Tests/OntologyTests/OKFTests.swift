@@ -59,6 +59,17 @@ struct OKFDocumentTests {
         #expect(text.contains("timestamp:"))
     }
 
+    @Test("OKF recommended field: timestamp from Task.dueDate")
+    func testTimestampFromDueDate() throws {
+        let task = Task(
+            name: "Draft encounter table",
+            dueDate: DateTime(Date(timeIntervalSince1970: 1_700_000_000))
+        )
+        let doc = try OKFDocument(task)
+        let text = doc.string()
+        #expect(text.contains("timestamp:"))
+    }
+
     @Test("OKF id field preserved as extension key")
     func testIDPreserved() throws {
         let place = Place(identifier: "place.inn01", name: "The Rusty Flagon")
@@ -179,6 +190,47 @@ struct OKFReaderTests {
         let doc = "---\n\(okfFrontmatter)\n---"
         let plan = try OKFReader.decode(Plan.self, from: doc)
         #expect(plan.url?.absoluteString == "https://example.com/plan")
+    }
+
+    @Test("OKFReader favors a hand-edited title over a stale name extension key")
+    func testTitleWinsOverStaleName() throws {
+        let okfFrontmatter = """
+        type: Place
+        title: Evermore City
+        name: Old Evermore
+        id: place.ev01
+        """
+        let doc = "---\n\(okfFrontmatter)\n---"
+        let place = try OKFReader.decode(Place.self, from: doc)
+        #expect(place.name == "Evermore City")
+    }
+
+    @Test("OKFReader favors a hand-edited resource over a stale url extension key")
+    func testResourceWinsOverStaleURL() throws {
+        let okfFrontmatter = """
+        type: Plan
+        title: My Plan
+        resource: "https://example.com/new"
+        url: "https://example.com/old"
+        id: plan.p01
+        """
+        let doc = "---\n\(okfFrontmatter)\n---"
+        let plan = try OKFReader.decode(Plan.self, from: doc)
+        #expect(plan.url?.absoluteString == "https://example.com/new")
+    }
+
+    @Test("OKFReader favors a hand-edited timestamp over the stale date field it was derived from")
+    func testTimestampWinsOverStaleDateField() throws {
+        let okfFrontmatter = """
+        type: Occurrence
+        title: Session 1
+        startDate: "2023-11-14T22:13:20.000Z"
+        timestamp: "2024-01-01T00:00:00.000Z"
+        id: occurrence.s01
+        """
+        let doc = "---\n\(okfFrontmatter)\n---"
+        let occ = try OKFReader.decode(Occurrence.self, from: doc)
+        #expect(occ.startDate?.value == DateTime(string: "2024-01-01T00:00:00.000Z")?.value)
     }
 
     @Test("OKFReader tolerates unknown OKF extension fields")

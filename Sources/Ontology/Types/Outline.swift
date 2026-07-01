@@ -1,0 +1,147 @@
+import Foundation
+
+/// A node in a hierarchical outline/catalog.
+///
+/// Value type — no independent identity; lives embedded inside an `Outline`.
+/// A node is either a pure label (e.g. a section heading with no backing
+/// entity) or a pointer to a real Holon via `ref`, decorated with
+/// outline-specific metadata (`note`, `tags`) that doesn't belong on the
+/// referenced entity itself — the same entity can be annotated differently
+/// in different outlines.
+public struct OutlineNode: Hashable, Sendable {
+    public var title: String
+    /// Optional pointer to a full Holon this node represents.
+    public var ref: HolonRef?
+    public var note: String?
+    public var tags: [String]?
+    public var children: [OutlineNode]
+
+    public init(
+        title: String,
+        ref: HolonRef? = nil,
+        note: String? = nil,
+        tags: [String]? = nil,
+        children: [OutlineNode] = []
+    ) {
+        self.title = title
+        self.ref = ref
+        self.note = note
+        self.tags = tags
+        self.children = children
+    }
+}
+
+extension OutlineNode: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case title, ref, note, tags, children
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        try container.encode(String(describing: Self.self), forKey: .type)
+
+        try container.encode(title, forKey: .attribute(.title))
+        try container.encodeIfPresent(ref, forKey: .attribute(.ref))
+        try container.encodeIfPresent(note, forKey: .attribute(.note))
+        try container.encodeIfPresent(tags, forKey: .attribute(.tags))
+        if !children.isEmpty {
+            try container.encode(children, forKey: .attribute(.children))
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+
+        let describedType = String(describing: Self.self)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type),
+           decodedType != describedType {
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+            )
+        }
+
+        title = try container.decode(String.self, forKey: .attribute(.title))
+        ref = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.ref))
+        note = try container.decodeIfPresent(String.self, forKey: .attribute(.note))
+        tags = try container.decodeIfPresent([String].self, forKey: .attribute(.tags))
+        children = try container.decodeIfPresent([OutlineNode].self, forKey: .attribute(.children)) ?? []
+    }
+}
+
+/// A hierarchical catalog: an ordered tree of labeled, optionally-referenced
+/// nodes. Persisted as one markdown file, independent of directory layout —
+/// same relationship to `Collection` that a table of contents has to a
+/// folder listing.
+///
+/// ```markdown
+/// ---
+/// taxon: outline
+/// id: outline.campaign-toc
+/// name: Campaign Table of Contents
+/// nodes:
+///   - title: Act I — The Dragon Arc
+///     note: Introduces the goblin lair
+///     children:
+///       - title: Session 1
+///         ref: [[occurrence.s01]]
+/// ---
+/// ```
+public struct Outline: Hashable, Sendable {
+    public var identifier: String?
+    public var name: String?
+    public var description: String?
+    public var nodes: [OutlineNode]
+
+    public init(
+        identifier: String? = nil,
+        name: String? = nil,
+        description: String? = nil,
+        nodes: [OutlineNode] = []
+    ) {
+        self.identifier = identifier
+        self.name = name
+        self.description = description
+        self.nodes = nodes
+    }
+}
+
+extension Outline: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case name, description, nodes
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        if encoder.codingPath.isEmpty {
+            try container.encode(schema.org, forKey: .context)
+        }
+        try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(identifier, forKey: .id)
+        try container.encodeIfPresent(name, forKey: .attribute(.name))
+        try container.encodeIfPresent(description, forKey: .attribute(.description))
+        if !nodes.isEmpty {
+            try container.encode(nodes, forKey: .attribute(.nodes))
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+
+        let describedType = String(describing: Self.self)
+        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type),
+           decodedType != describedType {
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
+            )
+        }
+
+        identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
+        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
+        nodes = try container.decodeIfPresent([OutlineNode].self, forKey: .attribute(.nodes)) ?? []
+    }
+}

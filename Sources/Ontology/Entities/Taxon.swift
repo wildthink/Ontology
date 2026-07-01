@@ -35,6 +35,10 @@ public extension Taxon {
     static let collection: Taxon = "collection"
     static let task: Taxon = "task"
     static let commitment: Taxon = "commitment"
+    static let outline: Taxon = "outline"
+    static let relationship: Taxon = "relationship"
+    static let artifact: Taxon = "artifact"
+    static let media: Taxon = "media"
 }
 
 extension Taxon: Codable {
