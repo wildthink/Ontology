@@ -39,6 +39,8 @@ public extension Taxon {
     static let relationship: Taxon = "relationship"
     static let artifact: Taxon = "artifact"
     static let media: Taxon = "media"
+    static let tool: Taxon = "tool"
+    static let frame: Taxon = "frame"
 }
 
 extension Taxon: Codable {
