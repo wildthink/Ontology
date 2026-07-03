@@ -19,6 +19,11 @@ public struct Commitment: Hashable, Sendable {
     public var dueDate: DateTime?
     public var note: String?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -44,6 +49,7 @@ public struct Commitment: Hashable, Sendable {
 
 extension Commitment: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, plan, actor, recipient, role, status, dueDate, note
     }
 
@@ -53,6 +59,7 @@ extension Commitment: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(plan, forKey: .attribute(.plan))
@@ -67,6 +74,7 @@ extension Commitment: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
         actor = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.actor))

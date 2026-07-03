@@ -33,6 +33,11 @@ public struct Relationship: Hashable, Sendable {
     public var reciprocal: Bool?
     public var note: String?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -54,6 +59,7 @@ public struct Relationship: Hashable, Sendable {
 
 extension Relationship: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, from, to, kind, reciprocal, note
     }
 
@@ -63,6 +69,7 @@ extension Relationship: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encode(from, forKey: .attribute(.from))
@@ -86,6 +93,8 @@ extension Relationship: Codable {
         }
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         from = try container.decode(HolonRef.self, forKey: .attribute(.from))
         to = try container.decode(HolonRef.self, forKey: .attribute(.to))

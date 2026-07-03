@@ -13,6 +13,11 @@ public struct Record: Hashable, Sendable {
     /// Link to the artifact (document, recording, etc.) this record refers to.
     public var url: URL?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -34,6 +39,7 @@ public struct Record: Hashable, Sendable {
 
 extension Record: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, description, subject, outcome, recordedAt, url
     }
 
@@ -43,6 +49,7 @@ extension Record: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
@@ -55,6 +62,7 @@ extension Record: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
         subject = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.subject))

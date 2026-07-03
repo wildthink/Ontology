@@ -16,6 +16,9 @@ public struct OutlineNode: Hashable, Sendable {
     public var tags: [String]?
     public var children: [OutlineNode]
 
+    /// Open, schema-free metadata (see `Meta`).
+    public var meta: Meta?
+
     public init(
         title: String,
         ref: HolonRef? = nil,
@@ -33,12 +36,14 @@ public struct OutlineNode: Hashable, Sendable {
 
 extension OutlineNode: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case title, ref, note, tags, children
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
 
         try container.encode(title, forKey: .attribute(.title))
         try container.encodeIfPresent(ref, forKey: .attribute(.ref))
@@ -94,6 +99,9 @@ public struct Outline: Hashable, Sendable {
     public var description: String?
     public var nodes: [OutlineNode]
 
+    /// Open, schema-free metadata (see `Meta`).
+    public var meta: Meta?
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -109,6 +117,7 @@ public struct Outline: Hashable, Sendable {
 
 extension Outline: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, description, nodes
     }
 
@@ -118,6 +127,7 @@ extension Outline: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
@@ -140,6 +150,8 @@ extension Outline: Codable {
         }
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
         nodes = try container.decodeIfPresent([OutlineNode].self, forKey: .attribute(.nodes)) ?? []

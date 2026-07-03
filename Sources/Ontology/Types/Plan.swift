@@ -36,6 +36,11 @@ public struct Plan: Hashable, Sendable {
     /// External and proxy identifiers for cross-system matching.
     public var handles: [Handle]?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -79,6 +84,7 @@ public struct Plan: Hashable, Sendable {
 
 extension Plan: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, description, status, startDate, endDate, dueDate
         case location, url, rrule, tags, owner, participants, subject, effort, alarms, handles
     }
@@ -104,11 +110,13 @@ extension Plan: Codable {
         try c.encodeIfPresent(effort, forKey: .attribute(.effort))
         try c.encodeIfPresent(alarms, forKey: .attribute(.alarms))
         try c.encodeIfPresent(handles, forKey: .attribute(.handles))
+        try c.encodeIfPresent(meta, forKey: .attribute(.meta))
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         identifier = try c.decodeIfPresent(String.self, forKey: .id)
+        meta = try c.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try c.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try c.decodeIfPresent(String.self, forKey: .attribute(.description))
         status = try c.decodeIfPresent(String.self, forKey: .attribute(.status))

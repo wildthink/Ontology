@@ -101,3 +101,8 @@ extension Media: SchemaEntityReference {
     public static var taxon: Taxon { .media }
 }
 extension Media: Entity {}
+
+extension Document: SchemaEntityReference {
+    public static var taxon: Taxon { .document }
+}
+extension Document: Entity {}

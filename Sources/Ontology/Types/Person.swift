@@ -51,6 +51,11 @@ public struct Person: Hashable, Sendable {
     public var parents: [Person]?
     public var relatedTo: [Person]?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         givenName: String? = nil,
@@ -122,6 +127,7 @@ public extension Person {
 
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case givenName, familyName, email, telephone, address
         case jobTitle, worksFor, url, birthDate, sameAs, handles
         case contactPoint, knowsLanguage, preferences
@@ -138,6 +144,7 @@ extension Person: Codable {
         
         // Encode @type
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         
         // Encode @id
         try container.encodeIfPresent(identifier, forKey: .id)
@@ -179,6 +186,8 @@ extension Person: Codable {
         }
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         
         givenName = try container.decodeIfPresent(String.self, forKey: .attribute(.givenName))
         familyName = try container.decodeIfPresent(String.self, forKey: .attribute(.familyName))

@@ -28,6 +28,11 @@ public struct Artifact: Hashable, Sendable {
     public var media: HolonRef?
     public var tags: [String]?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -49,6 +54,7 @@ public struct Artifact: Hashable, Sendable {
 
 extension Artifact: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, description, owner, location, media, tags
     }
 
@@ -58,6 +64,7 @@ extension Artifact: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
@@ -81,6 +88,8 @@ extension Artifact: Codable {
         }
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
         owner = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.owner))
