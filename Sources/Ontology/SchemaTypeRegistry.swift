@@ -80,6 +80,8 @@ public enum SchemaTypeRegistry {
         }
 
         return Document(
+            identifier: obj["@id"]?.string ?? obj["url"]?.string
+                ?? sourceURL?.absoluteString ?? Document.shortID(taxon: .document),
             name: obj["headline"]?.string ?? obj["name"]?.string ?? obj["title"]?.string,
             description: obj["description"]?.string,
             url: (obj["url"]?.string ?? sourceURL?.absoluteString).flatMap(URL.init(string:)),
@@ -115,19 +117,39 @@ public enum SchemaTypeRegistry {
         return .object(obj)
     }
 
-    /// Record provenance on entities that carry handles.
+    /// Record provenance (handles / meta) and guarantee a stable identifier —
+    /// wild JSON-LD rarely carries `@id`, and search UIs need distinct IDs.
     private static func stamped(_ entity: any Entity, sourceURL: URL?) -> any Entity {
-        guard let sourceURL else { return entity }
-        let handle = Handle(kind: Handle.Kind.webPage, value: sourceURL.absoluteString)
-        switch entity {
-        case var p as Person:      p.handles = (p.handles ?? []) + [handle]; return p
-        case var o as Occurrence:  o.handles = (o.handles ?? []) + [handle]; return o
-        default:
-            var e = entity
-            var meta = e.meta ?? [:]
-            meta["sourceURL"] = .string(sourceURL.absoluteString)
-            e.meta = meta
-            return e
+        let handle = sourceURL.map {
+            Handle(kind: Handle.Kind.webPage, value: $0.absoluteString)
         }
+        switch entity {
+        case var p as Person:
+            if let handle { p.handles = (p.handles ?? []) + [handle] }
+            if p.identifier == nil { p.identifier = Person.shortID(taxon: .person) }
+            return p
+        case var o as Occurrence:
+            if let handle { o.handles = (o.handles ?? []) + [handle] }
+            if o.identifier == nil { o.identifier = Occurrence.shortID(taxon: .occurrence) }
+            return o
+        case var org as Organization:
+            if org.identifier == nil { org.identifier = Organization.shortID(taxon: .org) }
+            return sourced(org, sourceURL: sourceURL)
+        case var place as Place:
+            if place.identifier == nil { place.identifier = Place.shortID(taxon: .place) }
+            return sourced(place, sourceURL: sourceURL)
+        default:
+            return sourced(entity, sourceURL: sourceURL)
+        }
+    }
+
+    /// Fallback provenance for types without handles: record the page in meta.
+    private static func sourced(_ entity: any Entity, sourceURL: URL?) -> any Entity {
+        guard let sourceURL else { return entity }
+        var e = entity
+        var meta = e.meta ?? [:]
+        meta["sourceURL"] = .string(sourceURL.absoluteString)
+        e.meta = meta
+        return e
     }
 }
