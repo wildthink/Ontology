@@ -101,12 +101,3 @@ extension Media: SchemaEntityReference {
     public static var taxon: Taxon { .media }
 }
 extension Media: Entity {}
-
-// MARK: - Deprecated type conformances
-
-@available(*, deprecated, renamed: "Occurrence")
-extension Event: SchemaEntityReference {
-    public static var taxon: Taxon { .event }
-}
-@available(*, deprecated, renamed: "Occurrence")
-extension Event: Entity {}
