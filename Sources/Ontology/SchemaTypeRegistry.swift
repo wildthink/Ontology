@@ -24,7 +24,9 @@ public enum SchemaTypeRegistry {
         let person: @Sendable (JSON) throws -> any Entity = { try Person(json: $0) }
         let org: @Sendable (JSON) throws -> any Entity = { try Organization(json: $0) }
         let place: @Sendable (JSON) throws -> any Entity = { try Place(json: $0) }
-        let occurrence: @Sendable (JSON) throws -> any Entity = { try Occurrence(json: $0) }
+        let occurrence: @Sendable (JSON) throws -> any Entity = {
+            try Occurrence(json: normalizedEventObject($0))
+        }
 
         map["Person"] = person
         for name in ["Organization", "Corporation", "NGO", "EducationalOrganization",
@@ -108,12 +110,42 @@ public enum SchemaTypeRegistry {
     }
 
     /// Remove JSON-LD framing keys that would trip hub decoders' `@type`
-    /// validation or add noise. `@id` is kept — hub types decode it as
-    /// `identifier`.
+    /// validation or add noise. `@type` is stripped **recursively** — nested
+    /// wild-web objects (`author`, `organizer`, `address`, …) carry schema.org
+    /// type names that never match hub Swift type names; the full record is
+    /// preserved separately in `meta`, so nothing is lost. `@id` is kept —
+    /// hub types decode it as `identifier`.
     static func strippingLDKeys(_ json: JSON) -> JSON {
+        if var obj = json.object {
+            obj.removeValue(forKey: "@type")
+            obj.removeValue(forKey: "@context")
+            return .object(obj.mapValues { strippingLDKeys($0) })
+        }
+        if let arr = json.array {
+            return .array(arr.map { strippingLDKeys($0) })
+        }
+        return json
+    }
+
+    /// schema.org Event → hub Occurrence field remapping applied before decode:
+    /// `location` in the wild is usually a `Place` object, but the hub's
+    /// `Occurrence.location` is a flat string — move objects to `place`,
+    /// keep strings where they are. `attendee`/`performer` singletons/arrays
+    /// map onto `attendees`.
+    static func normalizedEventObject(_ json: JSON) -> JSON {
         guard var obj = json.object else { return json }
-        obj.removeValue(forKey: "@type")
-        obj.removeValue(forKey: "@context")
+        if let location = obj["location"], location.object != nil {
+            if obj["place"] == nil { obj["place"] = location }
+            // Surface a flat string too, when the Place has a name.
+            if let name = location.object?["name"]?.string {
+                obj["location"] = .string(name)
+            } else {
+                obj.removeValue(forKey: "location")
+            }
+        }
+        if obj["attendees"] == nil, let attendee = obj["attendee"] {
+            obj["attendees"] = attendee.array != nil ? attendee : .array([attendee])
+        }
         return .object(obj)
     }
 

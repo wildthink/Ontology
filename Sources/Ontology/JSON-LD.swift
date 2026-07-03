@@ -31,3 +31,18 @@ public enum JSONLDCodingKey<T: CodingKey>: CodingKey {
     public var intValue: Int? { nil }
     public init?(intValue: Int) { nil }
 }
+
+// MARK: - Lenient decoding helpers
+
+extension KeyedDecodingContainer {
+    /// Decodes a `[String]` field leniently: accepts an array of strings OR a
+    /// single string (wrapped into a one-element array). schema.org allows
+    /// both forms for most repeatable properties (`url`, `email`, `sameAs`, …),
+    /// and wild-web JSON-LD uses them interchangeably. Returns nil when the
+    /// key is absent or holds neither form.
+    public func decodeFlexibleStringList(forKey key: Key) -> [String]? {
+        if let list = try? decodeIfPresent([String].self, forKey: key) { return list }
+        if let single = try? decodeIfPresent(String.self, forKey: key) { return [single] }
+        return nil
+    }
+}
