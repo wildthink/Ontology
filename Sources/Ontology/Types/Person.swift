@@ -4,7 +4,12 @@ import Foundation
 public struct Person: Hashable, Sendable {
     /// Unique identifier for the person
     public var identifier: String?
-    
+
+    /// Full display name (https://schema.org/name). Bridges and providers
+    /// populate this with the formatted full name; `givenName`/`familyName`
+    /// remain the structured components.
+    public var name: String?
+
     /// Given name (first name) of the person
     public var givenName: String?
     
@@ -52,9 +57,7 @@ public struct Person: Hashable, Sendable {
     public var relatedTo: [Person]?
 
     /// Open, schema-free metadata (see `Meta`).
-
     public var meta: Meta?
-
 
     public init(
         identifier: String? = nil,
@@ -113,6 +116,7 @@ public extension Person {
                 self.init(givenName: parts[0])
             }
         }
+        self.name = name
     }
 }
 
@@ -128,6 +132,7 @@ public extension Person {
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
         case meta
+        case name
         case givenName, familyName, email, telephone, address
         case jobTitle, worksFor, url, birthDate, sameAs, handles
         case contactPoint, knowsLanguage, preferences
@@ -150,6 +155,7 @@ extension Person: Codable {
         try container.encodeIfPresent(identifier, forKey: .id)
         
         // Encode properties
+        try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(givenName, forKey: .attribute(.givenName))
         try container.encodeIfPresent(familyName, forKey: .attribute(.familyName))
         try container.encodeIfPresent(email, forKey: .attribute(.email))
@@ -189,6 +195,7 @@ extension Person: Codable {
 
         meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         
+        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         givenName = try container.decodeIfPresent(String.self, forKey: .attribute(.givenName))
         familyName = try container.decodeIfPresent(String.self, forKey: .attribute(.familyName))
         email = try container.decodeIfPresent([String].self, forKey: .attribute(.email))

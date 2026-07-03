@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol EntityReference: Holon, Hashable, Codable {
+public protocol EntityReference: Holon, Hashable, Codable, Identifiable {
     var id: EID   { get }
     var taxon: Taxon { get }
 }
