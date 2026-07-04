@@ -1,11 +1,11 @@
-// swift-tools-version: 6.1
+// swift-tools-version: 6.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let package = Package(
     name: "Ontology",
-    platforms: [.macOS(.v15), .iOS(.v18), .tvOS(.v18), .watchOS(.v11)],
+    platforms: [.macOS(.v26), .iOS(.v18), .tvOS(.v18), .watchOS(.v11)],
     products: [
         .library(
             name: "Ontology",
@@ -66,5 +66,6 @@ let package = Package(
             name: "OntologyTests",
             dependencies: ["Ontology", "OntologyApple", "OntologyOKF", "OntologyGoogle"]
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )

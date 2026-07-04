@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol EntityReference: Holon, Hashable, Codable {
+public protocol EntityReference: Holon, Hashable, Codable, Identifiable {
     var id: EID   { get }
     var taxon: Taxon { get }
 }
@@ -102,11 +102,7 @@ extension Media: SchemaEntityReference {
 }
 extension Media: Entity {}
 
-// MARK: - Deprecated type conformances
-
-@available(*, deprecated, renamed: "Occurrence")
-extension Event: SchemaEntityReference {
-    public static var taxon: Taxon { .event }
+extension Document: SchemaEntityReference {
+    public static var taxon: Taxon { .document }
 }
-@available(*, deprecated, renamed: "Occurrence")
-extension Event: Entity {}
+extension Document: Entity {}

@@ -23,6 +23,11 @@ public struct Organization: Hashable, Sendable {
     /// External and proxy identifiers for cross-system matching.
     public var handles: [Handle]?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -55,6 +60,7 @@ public struct Organization: Hashable, Sendable {
 
 extension Organization: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, email, telephone, address, url, handles
     }
 
@@ -65,6 +71,7 @@ extension Organization: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
 
         try container.encodeIfPresent(name, forKey: .attribute(.name))
@@ -79,6 +86,8 @@ extension Organization: Codable {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         email = try container.decodeIfPresent([String].self, forKey: .attribute(.email))
         telephone = try container.decodeIfPresent([String].self, forKey: .attribute(.telephone))

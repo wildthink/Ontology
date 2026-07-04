@@ -39,6 +39,9 @@ extension Person {
             contactPoint: contactPoint
         )
 
+        let fullName = CNContactFormatter.string(from: contact, style: .fullName)
+        self.name = (fullName?.isEmpty == false) ? fullName : contact.organizationName.isEmpty ? nil : contact.organizationName
+
         var spouses: [Person] = [], siblings: [Person] = [], children: [Person] = [],
             parents: [Person] = [], others: [Person] = []
 

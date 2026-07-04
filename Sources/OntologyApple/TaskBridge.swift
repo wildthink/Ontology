@@ -20,7 +20,9 @@ extension Task {
             description: reminder.notes,
             dueDate: due,
             status: reminder.isCompleted ? .done : .open,
-            alarms: reminder.alarms?.map(Alarm.init(_:))
+            priority: reminder.priority == 0 ? nil : reminder.priority,
+            alarms: reminder.alarms?.map(Alarm.init(_:)),
+            handles: [Handle(kind: Handle.Kind.appleCalendarItem, value: reminder.calendarItemIdentifier)]
         )
     }
 

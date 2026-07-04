@@ -25,6 +25,11 @@ public struct Task: Hashable, Sendable {
     /// External and proxy identifiers for cross-system matching.
     public var handles: [Handle]?
 
+    /// Open, schema-free metadata (see `Meta`).
+
+    public var meta: Meta?
+
+
     public init(
         identifier: String? = nil,
         name: String? = nil,
@@ -52,6 +57,7 @@ public struct Task: Hashable, Sendable {
 
 extension Task: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
         case name, description, plan, assignee, dueDate, status, priority, alarms, handles
     }
 
@@ -61,6 +67,7 @@ extension Task: Codable {
             try container.encode(schema.org, forKey: .context)
         }
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         try container.encodeIfPresent(identifier, forKey: .id)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
@@ -76,6 +83,7 @@ extension Task: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
         plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))

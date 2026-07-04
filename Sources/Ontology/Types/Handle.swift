@@ -38,6 +38,10 @@ extension Handle {
         public static let appleContacts          = "apple.contacts"
         public static let appleCalendarItem      = "apple.eventkit.item"
         public static let appleCalendarItemExt   = "apple.eventkit.external"
+        public static let appleSpotlight         = "apple.spotlight"
+
+        // Web provenance — the page a record was extracted from
+        public static let webPage                = "web.page"
 
         // Google system identifiers
         public static let googlePeople   = "google.people"

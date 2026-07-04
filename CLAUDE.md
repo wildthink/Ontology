@@ -16,7 +16,7 @@ swift test --filter OntologyTests/<TestClassName>/<testMethodName>
 # Example: swift test --filter OntologyTests/OccurrenceBridgeTests/testBasicProperties
 ```
 
-CI runs `swift build -v` and `swift test -v` against Swift 6.0, 6.1, and 6.2.
+CI runs `swift build -v` and `swift test -v`. The package requires swift-tools 6.3 and macOS 26 (matching the downstream Luxo package, which depends on this one).
 
 ## Architectural direction
 
@@ -24,11 +24,17 @@ The codebase follows a **hub-and-spoke** architecture.
 
 ### Hub: this package's own ontology
 
-**This package's types are the hub.** Schema.org, Apple frameworks, Google Workspace, OKF, and JSON-LD are all spokes. Where field names happen to align with Schema.org (e.g. `givenName`, `startDate`), that's a convenience — not a commitment. When the ontology's semantics diverge from Schema.org, the ontology wins.
+**This package's types are the hub.** Schema.org, Apple frameworks, Google Workspace, OKF, JSON-LD, and the Luxo search package (`~/dev/packages/Luxo`, depends on this package by path) are all spokes. Where field names happen to align with Schema.org (e.g. `givenName`, `startDate`), that's a convenience — not a commitment. When the ontology's semantics diverge from Schema.org, the ontology wins.
 
 ### Holon + Entity
 
 Every meaningful concept is a **Holon** — simultaneously a whole thing in itself, made of parts, and part of something larger. **Entity** is a Holon with typed, machine-readable attributes (`Codable`). Concrete types like `Person`, `Place`, `Organization`, `Plan`, `Occurrence`, `Task`, `Commitment` conform to `Entity`.
+
+The `Entity` protocol requires two things beyond `Holon + Codable`:
+- `var name: String? { get }` — every entity is displayable by name.
+- `var meta: Meta? { get set }` — the open, schema-free metadata bag (`Meta = [String: Universal.JSON]`, see `Entities/Meta.swift`). `meta` round-trips through a nested `meta:` frontmatter key and never collides with typed schema fields. Spokes use it for provider extras (`kMDItem*` values, OpenGraph tags, raw JSON-LD, provenance).
+
+`EntityReference` is `Identifiable` (usable directly in SwiftUI lists).
 
 **Value types** (`DateTime`, `GeoCoordinates`, `QuantitativeValue`, `Alarm`) have no independent identity and live embedded in an Entity's fields.
 
@@ -50,6 +56,7 @@ Every meaningful concept is a **Holon** — simultaneously a whole thing in itse
 | `Relationship` | Standing social structure between two actors (rivalry, mentorship, membership) — independent of any Plan, unlike `Commitment` | Yes |
 | `Artifact` | An in-fiction object with identity — a prop, weapon, document, possession | Yes |
 | `Media` | A reference to an external/local image, video, or audio file, with caption/credit/format metadata. Not an in-fiction object — see `Artifact` | Yes |
+| `Document` | A file, application, or web resource discovered by search — url + contentType + dates + size, everything else in `meta`. The flexible catch-all for Spotlight hits and unmapped web records. Distinct from `Media` (illustrative asset) and `Artifact` (in-fiction object) | Yes |
 | `RRule` | Recurrence pattern — embedded inside a `Plan`, never standalone | No |
 | `Alarm` | Notification trigger embedded in Plan/Occurrence/Task | No |
 | `OutlineNode` | A node in an `Outline` — title + optional `HolonRef` + note/tags + children | No |
@@ -66,7 +73,7 @@ Every meaningful concept is a **Holon** — simultaneously a whole thing in itse
 
 **Alarms are informational** — they may be set on Plans, Occurrences, and Tasks to trigger notifications, but plan progress and completion must never depend on them.
 
-`Event` and `PlanAction` are still present but marked `@available(*, deprecated)` — use `Plan` and `Occurrence` for all new code.
+The deprecated `Event`, `PlanAction`, `ItemList`, and `Trip` types have been **removed**. Use `Plan`/`Occurrence`/`Collection`.
 
 ### Markdown as exchange format
 
@@ -112,7 +119,7 @@ All static Taxon constants are declared in `Taxon.swift`. Current set:
 ```swift
 .anything, .agent, .person, .org, .place, .event, .topic,
 .plan, .occurrence, .record, .collection, .task, .commitment, .outline,
-.relationship, .artifact, .media
+.relationship, .artifact, .media, .document, .tool, .frame
 ```
 
 ### Module structure
@@ -191,6 +198,18 @@ When decoding, validate `@type` with `decodeIfPresent` to stay compatible with f
 ### DateTime encoding
 
 `DateTime` wraps `Date` + optional `TimeZone`. Timezone resolution priority during encoding: (1) `encoder.userInfo[DateTime.timeZoneOverrideKey]`, (2) the `DateTime`'s own `timeZone`, (3) GMT/UTC.
+
+`DateTime(string:)` parses **leniently**: fractional seconds, whole seconds, or a bare date (`2026-06-30`) all accept — wild-web JSON-LD and hand-authored frontmatter rarely include fractional seconds.
+
+### SchemaTypeRegistry (wild-web JSON-LD → hub entities)
+
+`SchemaTypeRegistry.entity(fromJSONLD:sourceURL:)` decodes schema.org JSON-LD records into hub entities: `Person`→`Person`, `Organization` subtypes→`Organization`, `Place`/`LocalBusiness`→`Place`, `Event` subtypes→`Occurrence`, everything else (or any typed-decode failure) → `Document` preserving the raw record in `meta["jsonld"]`. Never throws.
+
+Leniency machinery for wild data (do not remove):
+- `@type` is stripped **recursively** before decode (nested schema.org type names never match hub Swift type names).
+- schema.org Event `location` objects are remapped to `Occurrence.place` (`normalizedEventObject`).
+- `KeyedDecodingContainer.decodeFlexibleStringList(forKey:)` accepts `String` or `[String]` for repeatable properties (Person.email/telephone/url/sameAs/knowsLanguage use it).
+- Entities decoded from records without `@id` get a minted `shortID` so search UIs always have distinct stable ids.
 
 ### Recurrence rules
 

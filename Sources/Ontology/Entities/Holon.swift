@@ -17,4 +17,12 @@ public extension Holon {
 /// A Holon with typed, machine-readable attributes.
 /// Value types (DateTime, GeoCoordinates, etc.) are NOT Entities — they have no
 /// independent identity and live embedded in an Entity's fields.
-public protocol Entity: Holon, Codable {}
+public protocol Entity: Holon, Codable {
+    /// Human-readable name (https://schema.org/name). Every entity can be
+    /// displayed uniformly by name regardless of concrete type.
+    var name: String? { get }
+
+    /// Open, schema-free metadata — see `Meta`. Round-trips through the
+    /// `meta:` frontmatter key; never collides with typed schema fields.
+    var meta: Meta? { get set }
+}

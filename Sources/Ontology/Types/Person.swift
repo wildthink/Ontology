@@ -4,7 +4,12 @@ import Foundation
 public struct Person: Hashable, Sendable {
     /// Unique identifier for the person
     public var identifier: String?
-    
+
+    /// Full display name (https://schema.org/name). Bridges and providers
+    /// populate this with the formatted full name; `givenName`/`familyName`
+    /// remain the structured components.
+    public var name: String?
+
     /// Given name (first name) of the person
     public var givenName: String?
     
@@ -50,6 +55,9 @@ public struct Person: Hashable, Sendable {
     public var siblings: [Person]?
     public var parents: [Person]?
     public var relatedTo: [Person]?
+
+    /// Open, schema-free metadata (see `Meta`).
+    public var meta: Meta?
 
     public init(
         identifier: String? = nil,
@@ -108,6 +116,7 @@ public extension Person {
                 self.init(givenName: parts[0])
             }
         }
+        self.name = name
     }
 }
 
@@ -122,6 +131,8 @@ public extension Person {
 
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
+        case meta
+        case name
         case givenName, familyName, email, telephone, address
         case jobTitle, worksFor, url, birthDate, sameAs, handles
         case contactPoint, knowsLanguage, preferences
@@ -138,11 +149,13 @@ extension Person: Codable {
         
         // Encode @type
         try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
         
         // Encode @id
         try container.encodeIfPresent(identifier, forKey: .id)
         
         // Encode properties
+        try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(givenName, forKey: .attribute(.givenName))
         try container.encodeIfPresent(familyName, forKey: .attribute(.familyName))
         try container.encodeIfPresent(email, forKey: .attribute(.email))
@@ -179,22 +192,24 @@ extension Person: Codable {
         }
 
         identifier = try container.decodeIfPresent(String.self, forKey: .id)
+
+        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         
+        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         givenName = try container.decodeIfPresent(String.self, forKey: .attribute(.givenName))
         familyName = try container.decodeIfPresent(String.self, forKey: .attribute(.familyName))
-        email = try container.decodeIfPresent([String].self, forKey: .attribute(.email))
-        telephone = try container.decodeIfPresent([String].self, forKey: .attribute(.telephone))
+        email = container.decodeFlexibleStringList(forKey: .attribute(.email))
+        telephone = container.decodeFlexibleStringList(forKey: .attribute(.telephone))
         address = try container.decodeIfPresent([PostalAddress].self, forKey: .attribute(.address))
         jobTitle = try container.decodeIfPresent(String.self, forKey: .attribute(.jobTitle))
         worksFor = try container.decodeIfPresent(Organization.self, forKey: .attribute(.worksFor))
-        url = try container.decodeIfPresent([String].self, forKey: .attribute(.url))
+        url = container.decodeFlexibleStringList(forKey: .attribute(.url))
         birthDate = try container.decodeIfPresent(String.self, forKey: .attribute(.birthDate))
-        sameAs = try container.decodeIfPresent([String].self, forKey: .attribute(.sameAs))
+        sameAs = container.decodeFlexibleStringList(forKey: .attribute(.sameAs))
         handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
         contactPoint = try container.decodeIfPresent(
             [ContactPoint].self, forKey: .attribute(.contactPoint))
-        knowsLanguage = try container.decodeIfPresent(
-            [String].self, forKey: .attribute(.knowsLanguage))
+        knowsLanguage = container.decodeFlexibleStringList(forKey: .attribute(.knowsLanguage))
         spouse = try container.decodeIfPresent([Person].self, forKey: .attribute(.spouse))
         children = try container.decodeIfPresent([Person].self, forKey: .attribute(.children))
         siblings = try container.decodeIfPresent([Person].self, forKey: .attribute(.siblings))

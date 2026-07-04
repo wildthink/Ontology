@@ -15,12 +15,25 @@ public struct DateTime: Hashable, Sendable {
         self.timeZone = timeZone
     }
 
+    /// Parses ISO 8601 leniently: fractional seconds, whole seconds, or a
+    /// bare date (`2026-06-30`) all accept — wild-web JSON-LD and hand-authored
+    /// frontmatter rarely include fractional seconds.
     public init?(string: String) {
         let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: string) else { return nil }
-        self.value = date
-        self.timeZone = TimeZone(iso8601: string)
+        let attempts: [ISO8601DateFormatter.Options] = [
+            [.withInternetDateTime, .withFractionalSeconds],
+            [.withInternetDateTime],
+            [.withFullDate],
+        ]
+        for options in attempts {
+            formatter.formatOptions = options
+            if let date = formatter.date(from: string) {
+                self.value = date
+                self.timeZone = TimeZone(iso8601: string)
+                return
+            }
+        }
+        return nil
     }
 }
 
