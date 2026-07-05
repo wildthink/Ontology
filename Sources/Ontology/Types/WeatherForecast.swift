@@ -109,6 +109,17 @@ public struct WeatherForecast: Hashable, Sendable {
     /// The pressure trend (rising, falling, steady)
     public var pressureTrend: String?
 
+    // MARK: Attribution
+
+    /// The name of the data provider (e.g. "Apple Weather", "Open-Meteo")
+    public var provider: String?
+
+    /// The attribution statement required by the data provider
+    public var attribution: String?
+
+    /// A link to the provider's attribution page
+    public var attributionLink: String?
+
     public init(dateTime: Date) {
         self.dateTime = dateTime
     }
@@ -252,13 +263,10 @@ extension WeatherForecast: Codable {
         }
         try container.encodeIfPresent(pressureTrend, forKey: .attribute(.pressureTrend))
 
-        // Add required WeatherKit attribution
-        try container.encode("Apple Weather", forKey: .attribute(.provider))
-        try container.encode(
-            "Weather data provided by Apple Weather", forKey: .attribute(.attribution))
-        try container.encode(
-            "https://weatherkit.apple.com/legal-attribution.html",
-            forKey: .attribute(.attributionLink))
+        // Provider attribution (set by the producing bridge/backend)
+        try container.encodeIfPresent(provider, forKey: .attribute(.provider))
+        try container.encodeIfPresent(attribution, forKey: .attribute(.attribution))
+        try container.encodeIfPresent(attributionLink, forKey: .attribute(.attributionLink))
     }
 
     public init(from decoder: Decoder) throws {
@@ -390,5 +398,11 @@ extension WeatherForecast: Codable {
         }
         pressureTrend = try container.decodeIfPresent(
             String.self, forKey: .attribute(.pressureTrend))
+
+        // Attribution
+        provider = try container.decodeIfPresent(String.self, forKey: .attribute(.provider))
+        attribution = try container.decodeIfPresent(String.self, forKey: .attribute(.attribution))
+        attributionLink = try container.decodeIfPresent(
+            String.self, forKey: .attribute(.attributionLink))
     }
 }

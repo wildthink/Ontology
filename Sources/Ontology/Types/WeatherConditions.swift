@@ -24,6 +24,16 @@ public struct WeatherConditions: Hashable, Sendable {
     /// The probability of precipitation during the hour.
     /// The value is from 0 (0% probability) to 1 (100% probability)
     public var precipitationChance: Double?
+
+    /// The name of the data provider (e.g. "Apple Weather", "Open-Meteo")
+    public var provider: String?
+
+    /// The attribution statement required by the data provider
+    public var attribution: String?
+
+    /// A link to the provider's attribution page
+    public var attributionLink: String?
+
     public init(
         dateTime: Date,
         temperature: Measurement<UnitTemperature>,
@@ -31,7 +41,10 @@ public struct WeatherConditions: Hashable, Sendable {
         windSpeed: Measurement<UnitSpeed>,
         humidity: Double,
         condition: String,
-        precipitationChance: Double? = nil
+        precipitationChance: Double? = nil,
+        provider: String? = nil,
+        attribution: String? = nil,
+        attributionLink: String? = nil
     ) {
         self.dateTime = dateTime
         self.temperature = temperature
@@ -40,6 +53,9 @@ public struct WeatherConditions: Hashable, Sendable {
         self.humidity = humidity
         self.condition = condition
         self.precipitationChance = precipitationChance
+        self.provider = provider
+        self.attribution = attribution
+        self.attributionLink = attributionLink
     }
 }
 
@@ -81,13 +97,10 @@ extension WeatherConditions: Codable {
         }
         try container.encode(DateTime(dateTime), forKey: .attribute(.dateTime))
 
-        // Add required WeatherKit attribution
-        try container.encode("Apple Weather", forKey: .attribute(.provider))
-        try container.encode(
-            "Weather data provided by Apple Weather", forKey: .attribute(.attribution))
-        try container.encode(
-            "https://weatherkit.apple.com/legal-attribution.html",
-            forKey: .attribute(.attributionLink))
+        // Provider attribution (set by the producing bridge/backend)
+        try container.encodeIfPresent(provider, forKey: .attribute(.provider))
+        try container.encodeIfPresent(attribution, forKey: .attribute(.attribution))
+        try container.encodeIfPresent(attributionLink, forKey: .attribute(.attributionLink))
     }
 
     public init(from decoder: Decoder) throws {
@@ -154,5 +167,10 @@ extension WeatherConditions: Codable {
         ) {
             precipitationChance = precipChance.value / 100.0
         }
+
+        provider = try container.decodeIfPresent(String.self, forKey: .attribute(.provider))
+        attribution = try container.decodeIfPresent(String.self, forKey: .attribute(.attribution))
+        attributionLink = try container.decodeIfPresent(
+            String.self, forKey: .attribute(.attributionLink))
     }
 }
