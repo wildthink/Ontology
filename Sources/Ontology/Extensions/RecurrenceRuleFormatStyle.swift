@@ -335,9 +335,19 @@ extension RecurrenceRuleFormatStyle: FormatStyle {
   }
 
   private func list(of values: [String]) -> String {
+    #if os(Linux)
+    switch values.count {
+    case 0: return ""
+    case 1: return values[0]
+    case 2: return values.joined(separator: " and ")
+    default:
+      return values.dropLast().joined(separator: ", ") + ", and " + values.last!
+    }
+    #else
     let formatter = ListFormatter()
     formatter.locale = locale
     return formatter.string(from: values) ?? values.joined(separator: ", ")
+    #endif
   }
 }
 

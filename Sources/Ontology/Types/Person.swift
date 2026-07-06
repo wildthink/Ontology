@@ -105,6 +105,14 @@ public struct Person: Hashable, Sendable {
 public extension Person {
     /// Initialize a Person by parsing a full name string.
     init(name: String) {
+        #if os(Linux)
+        let parts = name.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        if parts.count >= 2 {
+            self.init(givenName: parts.first, familyName: parts.dropFirst().joined(separator: " "))
+        } else {
+            self.init(givenName: parts.first ?? name)
+        }
+        #else
         let formatter = PersonNameComponentsFormatter()
         if let components = formatter.personNameComponents(from: name) {
             self.init(givenName: components.givenName, familyName: components.familyName)
@@ -116,6 +124,7 @@ public extension Person {
                 self.init(givenName: parts[0])
             }
         }
+        #endif
         self.name = name
     }
 }
