@@ -1,18 +1,29 @@
 # Domain Model
 
-This document describes the conceptual model underlying the Ontology library — the vocabulary, relationships, and lifecycle it is designed to support. It is the reference for anyone building applications on top of this package, and the source of truth when the code and this document conflict.
+This document describes the conceptual model underlying the 
+Ontology library — the vocabulary, relationships, and lifecycle it 
+is designed to support. It is the reference for anyone building
+applications on top of this package, and the source of truth when 
+the code and this document conflict.
 
 ---
 
 ## The big idea
 
-Most planning and coordination tools model the world as disconnected objects: calendar events, to-do items, reminders, invitations. This leads to friction — you create an event, then a separate task, then a separate reminder, and nothing knows they are all about the same thing.
+Most planning and coordination tools model the world as disconnected 
+objects: calendar events, to-do items, reminders, invitations. 
+This leads to friction — you create an event, then a separate 
+task, then a separate reminder, and nothing knows they are all 
+about the same thing.
 
 This library models the world differently:
 
 **Opportunity → Plan → Commitments / Tasks / Schedule → Completion → Record**
 
-A `Plan` is the primary coordinating object. Everything else — schedule slots, tasks, reminders, collaborators, outcomes — attaches to it. Calendar events and reminders are projections of a plan into time, not the root domain object.
+A `Plan` is the primary coordinating object. Everything else — 
+schedule slots, tasks, reminders, collaborators, outcomes — 
+attaches to it. Calendar events and reminders are projections of 
+a plan into time, not the root domain object.
 
 ---
 
