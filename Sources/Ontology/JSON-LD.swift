@@ -45,4 +45,15 @@ extension KeyedDecodingContainer {
         if let single = try? decodeIfPresent(String.self, forKey: key) { return [single] }
         return nil
     }
+
+    /// Decodes a schema.org Text field leniently: accepts a string, or a bare
+    /// integer/number and stringifies it. YAML/JSON coerce unquoted numeric
+    /// values (e.g. a `postalCode: 94016`) to numbers, which would otherwise
+    /// fail a strict `String` decode. Returns nil when the key is absent.
+    public func decodeStringLeniently(forKey key: Key) throws -> String? {
+        if let string = try? decodeIfPresent(String.self, forKey: key) { return string }
+        if let int = try? decodeIfPresent(Int.self, forKey: key) { return String(int) }
+        if let double = try? decodeIfPresent(Double.self, forKey: key) { return String(double) }
+        return nil
+    }
 }

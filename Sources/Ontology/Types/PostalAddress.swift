@@ -76,7 +76,9 @@ extension PostalAddress: Codable {
             String.self, forKey: .attribute(.addressLocality))
         addressRegion = try container.decodeIfPresent(
             String.self, forKey: .attribute(.addressRegion))
-        postalCode = try container.decodeIfPresent(String.self, forKey: .attribute(.postalCode))
+        // Postal codes are schema.org Text, but an unquoted numeric code (e.g. `94016`)
+        // parses out of YAML/JSON as a number — decode leniently so it still lands as a String.
+        postalCode = try container.decodeStringLeniently(forKey: .attribute(.postalCode))
         addressCountry = try container.decodeIfPresent(
             String.self, forKey: .attribute(.addressCountry))
     }
