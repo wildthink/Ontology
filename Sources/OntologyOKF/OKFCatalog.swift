@@ -114,6 +114,34 @@ public struct OKFCatalog: Sendable {
 
     public var concepts: [OKFConcept] { outline.allConcepts }
 
+    // MARK: - Editing
+
+    /// Moves the node (and its subtree) out of the outline into the trash, stamping
+    /// deletion time on every concept. A section containing no items is pure structure —
+    /// recreating it is one click — so it's dropped outright rather than kept in the trash.
+    public mutating func trash(id: String, now: Date = .now) {
+        guard let path = outline.indexPath(ofID: id),
+              let node = outline.remove(at: path) else { return }
+        guard !(node.isSection && node.allConcepts.isEmpty) else { return }
+        trash.append(node.stampingDeleted(now))
+    }
+
+    /// Moves the node back from the trash to the end of the root outline (its original
+    /// position is gone; the end is predictable), clearing deletion stamps.
+    public mutating func restore(id: String) {
+        guard let path = trash.indexPath(ofID: id),
+              let node = trash.remove(at: path) else { return }
+        trash = trash.pruningEmptySections()
+        outline.append(node.stampingDeleted(nil))
+    }
+
+    /// Hard-deletes a trashed node immediately; its files vanish on the next serialize.
+    public mutating func purge(id: String) {
+        guard let path = trash.indexPath(ofID: id) else { return }
+        trash.remove(at: path)
+        trash = trash.pruningEmptySections()
+    }
+
     // MARK: - Read
 
     /// Reconstruct a catalog from raw index text and concept file texts.
