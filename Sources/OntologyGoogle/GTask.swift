@@ -62,7 +62,7 @@ extension GTask {
     static func googleStatus(_ s: Task.Status) -> String {
         switch s {
         case .done:                    return "completed"
-        case .open, .inProgress, .cancelled: return "needsAction"
+        case .open, .inProgress, .cancelled, .skipped: return "needsAction"
         }
     }
 }

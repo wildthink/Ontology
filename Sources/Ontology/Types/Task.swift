@@ -7,6 +7,13 @@ public struct Task: Hashable, Sendable {
         case inProgress
         case done
         case cancelled
+        case skipped
+    }
+
+    public enum SchedulingIntent: String, Codable, Hashable, Sendable {
+        case asSoonAsPossible
+        case soon
+        case later
     }
 
     public var identifier: String?
@@ -17,7 +24,10 @@ public struct Task: Hashable, Sendable {
     /// The person or org responsible for this task.
     public var assignee: HolonRef?
     public var dueDate: DateTime?
+    /// Relative scheduling intent used when no exact due date is known.
+    public var schedulingIntent: SchedulingIntent?
     public var status: Status
+    public var statusChangedAt: DateTime?
     /// Lower number = higher priority.
     public var priority: Int?
     /// Alarms that prompt the assignee. These do not gate plan completion.
@@ -37,7 +47,9 @@ public struct Task: Hashable, Sendable {
         plan: HolonRef? = nil,
         assignee: HolonRef? = nil,
         dueDate: DateTime? = nil,
+        schedulingIntent: SchedulingIntent? = nil,
         status: Status = .open,
+        statusChangedAt: DateTime? = nil,
         priority: Int? = nil,
         alarms: [Alarm]? = nil,
         handles: [Handle]? = nil
@@ -48,7 +60,9 @@ public struct Task: Hashable, Sendable {
         self.plan = plan
         self.assignee = assignee
         self.dueDate = dueDate
+        self.schedulingIntent = schedulingIntent
         self.status = status
+        self.statusChangedAt = statusChangedAt
         self.priority = priority
         self.alarms = alarms
         self.handles = handles
@@ -58,7 +72,8 @@ public struct Task: Hashable, Sendable {
 extension Task: Codable {
     private enum CodingKeys: String, CodingKey {
         case meta
-        case name, description, plan, assignee, dueDate, status, priority, alarms, handles
+        case name, description, plan, assignee, dueDate, schedulingIntent, status, statusChangedAt
+        case priority, alarms, handles
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -74,7 +89,9 @@ extension Task: Codable {
         try container.encodeIfPresent(plan, forKey: .attribute(.plan))
         try container.encodeIfPresent(assignee, forKey: .attribute(.assignee))
         try container.encodeIfPresent(dueDate, forKey: .attribute(.dueDate))
+        try container.encodeIfPresent(schedulingIntent?.rawValue, forKey: .attribute(.schedulingIntent))
         try container.encode(status.rawValue, forKey: .attribute(.status))
+        try container.encodeIfPresent(statusChangedAt, forKey: .attribute(.statusChangedAt))
         try container.encodeIfPresent(priority, forKey: .attribute(.priority))
         try container.encodeIfPresent(alarms, forKey: .attribute(.alarms))
         try container.encodeIfPresent(handles, forKey: .attribute(.handles))
@@ -89,8 +106,11 @@ extension Task: Codable {
         plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
         assignee = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.assignee))
         dueDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.dueDate))
+        let rawSchedulingIntent = try container.decodeIfPresent(String.self, forKey: .attribute(.schedulingIntent))
+        schedulingIntent = rawSchedulingIntent.flatMap(SchedulingIntent.init(rawValue:))
         let rawStatus = try container.decodeIfPresent(String.self, forKey: .attribute(.status))
         status = rawStatus.flatMap(Status.init(rawValue:)) ?? .open
+        statusChangedAt = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.statusChangedAt))
         priority = try container.decodeIfPresent(Int.self, forKey: .attribute(.priority))
         alarms = try container.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
         handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))

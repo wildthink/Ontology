@@ -10,17 +10,55 @@ import Foundation
 /// `kind` is an open string so new systems can be added without changing this type.
 /// Use the `Handle.Kind` constants for known systems.
 public struct Handle: Hashable, Codable, Sendable {
+    public enum Role: String, Codable, Hashable, Sendable {
+        case canonical
+        case alias
+        case externalReference
+    }
     /// The external system or proxy identifier type. Use `Handle.Kind` constants.
     public var kind: String
     /// The raw identifier value in that system.
     public var value: String
     /// Human-readable label, e.g. "Work", "Home", "Apple".
     public var label: String?
+    public var role: Role
+    /// Groups canonical and alternate handles for one external record.
+    public var group: String?
 
-    public init(kind: String, value: String, label: String? = nil) {
+    public init(
+        kind: String,
+        value: String,
+        label: String? = nil,
+        role: Role = .canonical,
+        group: String? = nil
+    ) {
         self.kind = kind
         self.value = value
         self.label = label
+        self.role = role
+        self.group = group
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, value, label, role, group
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(String.self, forKey: .kind)
+        value = try container.decode(String.self, forKey: .value)
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+        role = try container.decodeIfPresent(Role.self, forKey: .role) ?? .canonical
+        group = try container.decodeIfPresent(String.self, forKey: .group)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(value, forKey: .value)
+        try container.encodeIfPresent(label, forKey: .label)
+        try container.encode(role, forKey: .role)
+        try container.encodeIfPresent(group, forKey: .group)
     }
 }
 
@@ -37,6 +75,8 @@ extension Handle {
         // Apple system identifiers
         public static let appleContacts          = "apple.contacts"
         public static let appleCalendarItem      = "apple.eventkit.item"
+        public static let appleCalendarEvent     = "apple.eventkit.event"
+        public static let appleReminder          = "apple.eventkit.reminder"
         public static let appleCalendarItemExt   = "apple.eventkit.external"
         public static let appleSpotlight         = "apple.spotlight"
 

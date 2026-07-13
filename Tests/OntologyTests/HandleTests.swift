@@ -50,13 +50,30 @@ struct HandleTests {
 
     @Test("Handle round-trips through JSON")
     func testHandleRoundTrip() throws {
-        let original = Handle(kind: Handle.Kind.googlePeople, value: "people/987654", label: "Google")
+        let original = Handle(
+            kind: Handle.Kind.googlePeople,
+            value: "people/987654",
+            label: "Google",
+            role: .alias,
+            group: "person.123"
+        )
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Handle.self, from: data)
 
         #expect(decoded.kind == Handle.Kind.googlePeople)
         #expect(decoded.value == "people/987654")
         #expect(decoded.label == "Google")
+        #expect(decoded.role == .alias)
+        #expect(decoded.group == "person.123")
+    }
+
+    @Test("Legacy Handle JSON defaults role to canonical")
+    func testLegacyHandleRoleDefault() throws {
+        let data = Data(#"{"kind":"email","value":"jane@example.com"}"#.utf8)
+        let decoded = try JSONDecoder().decode(Handle.self, from: data)
+
+        #expect(decoded.role == .canonical)
+        #expect(decoded.group == nil)
     }
 
     @Test("Person with handles round-trips through JSON")

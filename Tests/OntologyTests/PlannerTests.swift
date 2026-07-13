@@ -84,7 +84,9 @@ struct PlannerTests {
             plan: planRef,
             assignee: assigneeRef,
             dueDate: DateTime(Date(timeIntervalSinceReferenceDate: 86400)),
+            schedulingIntent: .soon,
             status: .inProgress,
+            statusChangedAt: DateTime(Date(timeIntervalSinceReferenceDate: 43200)),
             priority: 1
         )
 
@@ -96,8 +98,19 @@ struct PlannerTests {
         #expect(decoded.plan == planRef)
         #expect(decoded.assignee == assigneeRef)
         #expect(decoded.status == .inProgress)
+        #expect(decoded.schedulingIntent == .soon)
+        #expect(decoded.statusChangedAt != nil)
         #expect(decoded.priority == 1)
         #expect(decoded.dueDate != nil)
+    }
+
+    @Test("Task supports skipped workflow state")
+    func testTaskSkippedStatus() throws {
+        let task = Task(name: "Superseded work", status: .skipped)
+        let data = try JSONEncoder().encode(task)
+        let decoded = try JSONDecoder().decode(Task.self, from: data)
+
+        #expect(decoded.status == .skipped)
     }
 
     @Test("Task status defaults to .open when missing from JSON")
