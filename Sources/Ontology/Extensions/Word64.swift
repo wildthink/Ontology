@@ -69,12 +69,37 @@ public enum CompactWord64 {
 
     // 64 symbols for 6-bit packing.
     // a-z, A-Z, 0-9, -, _
+    // Future alternative: dense base-N encoding can preserve lengths 0...10 with
+    // as many as 84 symbols because sum(84^0...84^10) fits in 64 bits, while
+    // sum(85^0...85^10) does not. It would break existing raw values, replace
+    // shifts with multiplication/division, and consume tags available for
+    // external-string references, so this implementation keeps base 64.
     private static let alphabetBytes = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_".utf8)
-    private static let lookup: [UInt8: UInt64] = {
-        Dictionary(uniqueKeysWithValues: alphabetBytes.enumerated().map { (index, value) in
-            (value, UInt64(index))
-        })
-    }()
+    @inline(__always)
+    private static func code(for byte: UInt8) -> UInt64? {
+        switch byte {
+        case CharacterRange.lowercase:
+            UInt64(byte - CharacterRange.lowercase.lowerBound)
+        case CharacterRange.uppercase:
+            UInt64(byte - CharacterRange.uppercase.lowerBound + 26)
+        case CharacterRange.digits:
+            UInt64(byte - CharacterRange.digits.lowerBound + 52)
+        case CharacterRange.hyphen:
+            62
+        case CharacterRange.underscore:
+            63
+        default:
+            nil
+        }
+    }
+
+    private enum CharacterRange {
+        static let lowercase = UInt8(ascii: "a")...UInt8(ascii: "z")
+        static let uppercase = UInt8(ascii: "A")...UInt8(ascii: "Z")
+        static let digits = UInt8(ascii: "0")...UInt8(ascii: "9")
+        static let hyphen = UInt8(ascii: "-")
+        static let underscore = UInt8(ascii: "_")
+    }
 
     public static func maxCompactWordLength<T: FixedWidthInteger>(for type: T.Type) -> Int {
         layout(forBitWidth: T.bitWidth).maxSymbols
@@ -99,21 +124,18 @@ public enum CompactWord64 {
             bytes = Array(bytes.prefix(layout.maxSymbols))
         }
 
-        // Validate characters first so callers get deterministic character-level errors.
-        for byte in bytes {
-            guard lookup[byte] != nil else {
+        var payload: UInt64 = 0
+        for (offset, byte) in bytes.enumerated() {
+            guard let code = code(for: byte) else {
                 throw CompactWord64Error.unsupportedCharacter(Character(UnicodeScalar(byte)))
+            }
+            if offset < layout.maxSymbols {
+                payload |= (code << (offset * 6))
             }
         }
 
         guard bytes.count <= layout.maxSymbols else {
             throw CompactWord64Error.tooLong(maxLength: layout.maxSymbols)
-        }
-
-        var payload: UInt64 = 0
-        for (offset, byte) in bytes.enumerated() {
-            let code = lookup[byte]!
-            payload |= (code << (offset * 6))
         }
 
         let packed = (UInt64(bytes.count) << layout.payloadBits) | payload
