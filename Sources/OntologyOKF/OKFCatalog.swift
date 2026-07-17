@@ -404,7 +404,21 @@ public struct OKFCatalog: Sendable {
     /// Parse a list item's paragraph: a single `[title](path)` link resolving to a known
     /// concept, or plain text (a section).
     private static func parseNodeContent(_ paragraph: Paragraph, concepts: [String: OKFConcept]) -> OKFCatalogNode {
-        let inline = Array(paragraph.children)
+        var inline = Array(paragraph.children)
+        // Tolerate a leading GFM task-list checkbox the parser kept as literal
+        // text (e.g. "[x] [Title](path)"): a producer may emit
+        // `- [x] [Title](path)` outline lines so the index doubles as a
+        // selection checklist. Strip it so the remaining single link still
+        // resolves to its concept instead of the whole line degrading to a
+        // plain-text section (which would drop every concept from the outline).
+        if let first = inline.first as? Text {
+            let stripped = first.string.replacingOccurrences(
+                of: #"^\s*\[[ xX]\]\s*"#, with: "", options: .regularExpression)
+            if stripped != first.string {
+                if stripped.isEmpty { inline.removeFirst() }
+                else { inline[0] = Text(stripped) }
+            }
+        }
         if inline.count == 1, let link = inline[0] as? Link {
             let title = link.children.compactMap { ($0 as? Text)?.string }.joined()
             if let path = link.destination, let concept = concepts[path] {

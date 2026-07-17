@@ -173,6 +173,28 @@ struct OKFCatalogTests {
         #expect(outline.first?.isSection == true)
         #expect(outline.first?.title == "Mystery")
     }
+
+    /// GFM task-list checkboxes (`- [x] [Title](path)`) — as emitted by
+    /// Gutenberg so the index doubles as a selection checklist — must still
+    /// resolve to concepts and preserve nesting, not collapse into flat
+    /// plain-text sections (which would strip the outline and re-append every
+    /// concept at the root with colliding basename slugs).
+    @Test func checkboxOutlineResolvesConceptsAndNesting() {
+        let edited = """
+        # Catalog
+
+        - [x] [a](items/a.md)
+        - [ ] S
+          - [x] [b](items/b.md)
+        - [X] [c](items/c.md)
+        """
+        let outline = sampleCatalog().parsing(indexText: edited).outline
+        #expect(outline.map(\.title) == ["a", "S", "c"])
+        #expect(outline[0].isSection == false)          // concept, not a section
+        #expect(outline[1].isSection)                    // "S" stays a section…
+        #expect(outline[1].children.map(\.title) == ["b"])  // …with its nested child
+        #expect(outline[2].concept?.id == "items/c.md")  // `[X]` uppercase too
+    }
 }
 
 // MARK: - Trash & decay
