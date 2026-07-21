@@ -38,6 +38,7 @@ public struct Plan: Hashable, Sendable {
 
     /// Open, schema-free metadata (see `Meta`).
 
+    public var scoreCard: ScoreCard
     public var meta: Meta?
 
 
@@ -58,7 +59,8 @@ public struct Plan: Hashable, Sendable {
         subject: HolonRef? = nil,
         effort: QuantitativeValue? = nil,
         alarms: [Alarm]? = nil,
-        handles: [Handle]? = nil
+        handles: [Handle]? = nil,
+        scoreCard: ScoreCard = []
     ) {
         self.identifier = identifier
         self.name = name
@@ -77,6 +79,7 @@ public struct Plan: Hashable, Sendable {
         self.effort = effort
         self.alarms = alarms
         self.handles = handles
+        self.scoreCard = scoreCard
     }
 }
 
@@ -86,7 +89,10 @@ extension Plan: Codable {
     private enum CodingKeys: String, CodingKey {
         case meta
         case name, description, status, startDate, endDate, dueDate
-        case location, url, rrule, tags, owner, participants, subject, effort, alarms, handles
+        case scoreCard
+        case location, url, rrule, tags
+        case owner, participants, subject
+        case effort, alarms, handles
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -110,6 +116,9 @@ extension Plan: Codable {
         try c.encodeIfPresent(effort, forKey: .attribute(.effort))
         try c.encodeIfPresent(alarms, forKey: .attribute(.alarms))
         try c.encodeIfPresent(handles, forKey: .attribute(.handles))
+        if !scoreCard.isEmpty {
+            try c.encode(scoreCard, forKey: .attribute(.scoreCard))
+        }
         try c.encodeIfPresent(meta, forKey: .attribute(.meta))
     }
 
@@ -133,6 +142,9 @@ extension Plan: Codable {
         effort = try c.decodeIfPresent(QuantitativeValue.self, forKey: .attribute(.effort))
         alarms = try c.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
         handles = try c.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
+        scoreCard =
+            (try c.decodeIfPresent(ScoreCard.self, forKey: .attribute(.scoreCard)))
+            ?? []
     }
 }
 
