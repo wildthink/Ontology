@@ -5,6 +5,7 @@
 //  Created by Jason Jobe on 4/25/25.
 //
 
+#if canImport(SwiftUI)
 import SwiftUI
 import Ontology
 
@@ -27,3 +28,4 @@ struct PlaceCard: View {
 #Preview {
     AddressCard(model: PostalAddress())
 }
+#endif

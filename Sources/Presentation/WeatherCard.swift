@@ -5,6 +5,7 @@
 //  Created by Jason Jobe on 4/25/25.
 //
 
+#if canImport(SwiftUI)
 import SwiftUI
 
 struct WeatherCard: View {
@@ -16,3 +17,4 @@ struct WeatherCard: View {
 #Preview {
     WeatherCard()
 }
+#endif

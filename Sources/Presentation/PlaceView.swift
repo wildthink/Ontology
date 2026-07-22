@@ -5,6 +5,7 @@
 //  Created by Jason Jobe on 4/24/25.
 //
 
+#if canImport(SwiftUI) && canImport(MapKit)
 import SwiftUI
 import MapKit
 import OntologyApple
@@ -33,7 +34,9 @@ public struct PlaceView: View {
                 }
                 .mapControls {
                     MapUserLocationButton()
-                    MapZoomStepper()
+#if os(macOS)
+                     MapZoomStepper()
+#endif
                     MapScaleView()
                     MapCompass()
                 }
@@ -70,3 +73,5 @@ extension Place {
         .preferredColorScheme(.light)
         .padding()
 }
+#endif
+

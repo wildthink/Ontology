@@ -1,7 +1,10 @@
 import Foundation
+import Testing
+
+#if canImport(MapKit)
 import MapKit
 import OntologyApple
-import Testing
+#endif
 
 @testable import Ontology
 
@@ -59,6 +62,7 @@ struct PlaceTests {
         #expect(minimalPlace.url == nil)
     }
 
+    #if canImport(MapKit)
     @Test("Place initialization from MKPlacemark")
     func testInitFromMKPlacemark() throws {
         // Create a CLPlacemark with location data
@@ -114,6 +118,7 @@ struct PlaceTests {
         #expect(place.geo?.latitude == 40.7128)
         #expect(place.geo?.longitude == -74.0060)
     }
+    #endif
 
     @Test("Place JSON-LD encoding preserves all properties")
     func testJSONLDEncoding() throws {
