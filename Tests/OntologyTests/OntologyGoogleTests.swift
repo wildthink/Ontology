@@ -79,6 +79,9 @@ struct OntologyGoogleTests {
         #expect(plan.identifier == "master_xyz")
         #expect(plan.name == "Weekly Stand-up")
         #expect(plan.rrule == "FREQ=WEEKLY;BYDAY=MO")
+        // EXDATE rides on its own line in Google's recurrence array; it used to be
+        // dropped on the floor here.
+        #expect(plan.exceptDates?.count == 1)
     }
 
     @Test("GCalEvent all-day (date-only) parses without crash")
@@ -255,6 +258,34 @@ struct OntologyGoogleTests {
         #expect(roundTripped.identifier == plan.identifier)
         #expect(roundTripped.name == plan.name)
         #expect(roundTripped.rrule == plan.rrule)
+    }
+
+    @Test("Plan exceptDates round-trip through GCalEvent as an EXDATE line")
+    func testPlanExceptDatesToGCalEvent() throws {
+        let cancelled = try #require(DateTime(string: "2026-01-05T09:00:00Z"))
+        let plan = Plan(
+            identifier: "master_xyz",
+            name: "Weekly Stand-up",
+            startDate: DateTime(Date(timeIntervalSinceReferenceDate: 0), timeZone: .gmt),
+            rrule: "FREQ=WEEKLY;BYDAY=MO",
+            exceptDates: [cancelled]
+        )
+        let gcal = GCalEvent(plan)
+
+        #expect(gcal.recurrence?.count == 2)
+        #expect(gcal.recurrence?.contains("RRULE:FREQ=WEEKLY;BYDAY=MO") == true)
+        #expect(gcal.recurrence?.contains("EXDATE:20260105T090000Z") == true)
+
+        let roundTripped = Plan(gcal)
+        #expect(roundTripped.rrule == plan.rrule)
+        #expect(roundTripped.exceptDates?.count == 1)
+        #expect(roundTripped.exceptDates?.first?.value == cancelled.value)
+    }
+
+    @Test("A plan with neither rule nor exceptions writes no recurrence array")
+    func testPlanWithoutRecurrence() {
+        let gcal = GCalEvent(Plan(identifier: "x", name: "One-off"))
+        #expect(gcal.recurrence == nil)
     }
 
     @Test("GCalEvent encodes to JSON (write path)")

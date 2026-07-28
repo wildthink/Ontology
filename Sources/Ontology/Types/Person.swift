@@ -151,18 +151,9 @@ extension Person: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         
-        // Encode @context if we're at the root level (empty coding path)
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-        
-        // Encode @type
-        try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
         try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        
-        // Encode @id
-        try container.encodeIfPresent(identifier, forKey: .id)
-        
+
         // Encode properties
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(givenName, forKey: .attribute(.givenName))
@@ -188,19 +179,7 @@ extension Person: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
         
-        // Validate @type when present (absent in frontmatter contexts)
-        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type) {
-            let describedType = String(describing: Self.self)
-            guard decodedType == describedType else {
-                throw DecodingError.dataCorruptedError(
-                    forKey: .type,
-                    in: container,
-                    debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-                )
-            }
-        }
-
-        identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        identifier = try container.decodeJSONLDHeader(Self.self)
 
         meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         

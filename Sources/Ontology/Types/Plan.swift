@@ -22,6 +22,10 @@ public struct Plan: Hashable, Sendable {
     public var url: URL?
     /// RFC 5545 RRULE string, e.g. "FREQ=WEEKLY;BYDAY=FR"
     public var rrule: String?
+    /// Dates removed from the `rrule` recurrence — RFC 5545 `EXDATE`, which lives
+    /// on its own line rather than inside the RRULE. A cancelled instance of a
+    /// recurring plan lands here.
+    public var exceptDates: [DateTime]?
     public var tags: [String]?
     /// Who owns this plan.
     public var owner: HolonRef?
@@ -53,6 +57,7 @@ public struct Plan: Hashable, Sendable {
         location: Place? = nil,
         url: URL? = nil,
         rrule: String? = nil,
+        exceptDates: [DateTime]? = nil,
         tags: [String]? = nil,
         owner: HolonRef? = nil,
         participants: [HolonRef]? = nil,
@@ -72,6 +77,7 @@ public struct Plan: Hashable, Sendable {
         self.location = location
         self.url = url
         self.rrule = rrule
+        self.exceptDates = exceptDates
         self.tags = tags
         self.owner = owner
         self.participants = participants
@@ -90,16 +96,14 @@ extension Plan: Codable {
         case meta
         case name, description, status, startDate, endDate, dueDate
         case scoreCard
-        case location, url, rrule, tags
+        case location, url, rrule, exceptDates, tags
         case owner, participants, subject
         case effort, alarms, handles
     }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        if encoder.codingPath.isEmpty { try c.encode(schema.org, forKey: .context) }
-        try c.encode(String(describing: Self.self), forKey: .type)
-        try c.encodeIfPresent(identifier, forKey: .id)
+        try c.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
         try c.encodeIfPresent(name, forKey: .attribute(.name))
         try c.encodeIfPresent(description, forKey: .attribute(.description))
         try c.encodeIfPresent(status, forKey: .attribute(.status))
@@ -109,6 +113,7 @@ extension Plan: Codable {
         try c.encodeIfPresent(location, forKey: .attribute(.location))
         try c.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
         try c.encodeIfPresent(rrule, forKey: .attribute(.rrule))
+        try c.encodeIfPresent(exceptDates, forKey: .attribute(.exceptDates))
         try c.encodeIfPresent(tags, forKey: .attribute(.tags))
         try c.encodeIfPresent(owner, forKey: .attribute(.owner))
         try c.encodeIfPresent(participants, forKey: .attribute(.participants))
@@ -124,7 +129,7 @@ extension Plan: Codable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try c.decodeIfPresent(String.self, forKey: .id)
+        identifier = try c.decodeJSONLDHeader(Self.self)
         meta = try c.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try c.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try c.decodeIfPresent(String.self, forKey: .attribute(.description))
@@ -135,6 +140,7 @@ extension Plan: Codable {
         location = try c.decodeIfPresent(Place.self, forKey: .attribute(.location))
         if let s = try c.decodeIfPresent(String.self, forKey: .attribute(.url)) { url = URL(string: s) }
         rrule = try c.decodeIfPresent(String.self, forKey: .attribute(.rrule))
+        exceptDates = try c.decodeIfPresent([DateTime].self, forKey: .attribute(.exceptDates))
         tags = try c.decodeIfPresent([String].self, forKey: .attribute(.tags))
         owner = try c.decodeIfPresent(HolonRef.self, forKey: .attribute(.owner))
         participants = try c.decodeIfPresent([HolonRef].self, forKey: .attribute(.participants))

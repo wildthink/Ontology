@@ -70,11 +70,7 @@ extension Document: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-        try container.encode(String(describing: Self.self), forKey: .type)
-        try container.encodeIfPresent(identifier, forKey: .id)
+        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(description, forKey: .attribute(.description))
         try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
@@ -89,17 +85,7 @@ extension Document: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        let describedType = String(describing: Self.self)
-        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type),
-           decodedType != describedType {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
-        }
-
-        identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        identifier = try container.decodeJSONLDHeader(Self.self)
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
         description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
         url = try container.decodeIfPresent(String.self, forKey: .attribute(.url)).flatMap(URL.init(string:))

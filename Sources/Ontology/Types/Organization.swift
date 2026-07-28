@@ -67,12 +67,8 @@ extension Organization: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-        try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
         try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(identifier, forKey: .id)
 
         try container.encodeIfPresent(name, forKey: .attribute(.name))
         try container.encodeIfPresent(email, forKey: .attribute(.email))
@@ -85,7 +81,7 @@ extension Organization: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        identifier = try container.decodeIfPresent(String.self, forKey: .id)
+        identifier = try container.decodeJSONLDHeader(Self.self)
 
         meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
         name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
