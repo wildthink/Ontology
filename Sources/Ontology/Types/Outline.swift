@@ -41,28 +41,25 @@ extension OutlineNode: Codable {
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(meta, forKey: .meta)
 
-        try container.encode(title, forKey: .attribute(.title))
-        try container.encodeIfPresent(ref, forKey: .attribute(.ref))
-        try container.encodeIfPresent(note, forKey: .attribute(.note))
-        try container.encodeIfPresent(tags, forKey: .attribute(.tags))
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(ref, forKey: .ref)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encodeIfPresent(tags, forKey: .tags)
         if !children.isEmpty {
-            try container.encode(children, forKey: .attribute(.children))
+            try container.encode(children, forKey: .children)
         }
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        _ = try container.decodeJSONLDHeader(Self.self)
-        title = try container.decode(String.self, forKey: .attribute(.title))
-        ref = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.ref))
-        note = try container.decodeIfPresent(String.self, forKey: .attribute(.note))
-        tags = try container.decodeIfPresent([String].self, forKey: .attribute(.tags))
-        children = try container.decodeIfPresent([OutlineNode].self, forKey: .attribute(.children)) ?? []
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        ref = try container.value(.ref)
+        note = try container.value(.note)
+        tags = try container.value(.tags)
+        children = try container.value(.children, or: [])
     }
 }
 
@@ -108,29 +105,30 @@ public struct Outline: Hashable, Sendable {
 
 extension Outline: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, nodes
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(identifier, forKey: .identifier)
+        try container.encodeIfPresent(meta, forKey: .meta)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
         if !nodes.isEmpty {
-            try container.encode(nodes, forKey: .attribute(.nodes))
+            try container.encode(nodes, forKey: .nodes)
         }
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        identifier = try container.decodeJSONLDHeader(Self.self)
+        identifier = try container.value(.identifier)
 
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        nodes = try container.decodeIfPresent([OutlineNode].self, forKey: .attribute(.nodes)) ?? []
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        nodes = try container.value(.nodes, or: [])
     }
 }

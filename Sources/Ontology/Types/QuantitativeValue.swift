@@ -35,26 +35,6 @@ extension QuantitativeValue: Codable {
     private enum CodingKeys: String, CodingKey {
         case value, unitCode, unitText
     }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Encode @context if we're at the root level
-        try container.encodeJSONLDHeader(Self.self, encoder: encoder)
-        try container.encode(value, forKey: .attribute(.value))
-        try container.encode(unitCode, forKey: .attribute(.unitCode))
-        try container.encodeIfPresent(unitText, forKey: .attribute(.unitText))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        _ = try container.decodeJSONLDHeader(Self.self)
-        // Decode properties
-        value = try container.decode(Double.self, forKey: .attribute(.value))
-        unitCode = try container.decode(String.self, forKey: .attribute(.unitCode))
-        unitText = try container.decodeIfPresent(String.self, forKey: .attribute(.unitText))
-    }
 }
 
 import Foundation

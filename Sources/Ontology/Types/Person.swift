@@ -140,68 +140,40 @@ public extension Person {
 
 extension Person: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name
         case givenName, familyName, email, telephone, address
         case jobTitle, worksFor, url, birthDate, sameAs, handles
-        case contactPoint, knowsLanguage, preferences
+        case contactPoint, knowsLanguage
         case spouse, children, siblings, parents, relatedTo
     }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
 
-        // Encode properties
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(givenName, forKey: .attribute(.givenName))
-        try container.encodeIfPresent(familyName, forKey: .attribute(.familyName))
-        try container.encodeIfPresent(email, forKey: .attribute(.email))
-        try container.encodeIfPresent(telephone, forKey: .attribute(.telephone))
-        try container.encodeIfPresent(address, forKey: .attribute(.address))
-        try container.encodeIfPresent(jobTitle, forKey: .attribute(.jobTitle))
-        try container.encodeIfPresent(worksFor, forKey: .attribute(.worksFor))
-        try container.encodeIfPresent(url, forKey: .attribute(.url))
-        try container.encodeIfPresent(birthDate, forKey: .attribute(.birthDate))
-        try container.encodeIfPresent(sameAs, forKey: .attribute(.sameAs))
-        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
-        try container.encodeIfPresent(contactPoint, forKey: .attribute(.contactPoint))
-        try container.encodeIfPresent(knowsLanguage, forKey: .attribute(.knowsLanguage))
-        try container.encodeIfPresent(spouse, forKey: .attribute(.spouse))
-        try container.encodeIfPresent(children, forKey: .attribute(.children))
-        try container.encodeIfPresent(siblings, forKey: .attribute(.siblings))
-        try container.encodeIfPresent(parents, forKey: .attribute(.parents))
-        try container.encodeIfPresent(relatedTo, forKey: .attribute(.relatedTo))
-    }
-    
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        identifier = try container.decodeJSONLDHeader(Self.self)
+        identifier = try container.value(.identifier)
 
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
+        meta = try container.value(.meta)
         
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        givenName = try container.decodeIfPresent(String.self, forKey: .attribute(.givenName))
-        familyName = try container.decodeIfPresent(String.self, forKey: .attribute(.familyName))
-        email = container.decodeFlexibleStringList(forKey: .attribute(.email))
-        telephone = container.decodeFlexibleStringList(forKey: .attribute(.telephone))
-        address = try container.decodeIfPresent([PostalAddress].self, forKey: .attribute(.address))
-        jobTitle = try container.decodeIfPresent(String.self, forKey: .attribute(.jobTitle))
-        worksFor = try container.decodeIfPresent(Organization.self, forKey: .attribute(.worksFor))
-        url = container.decodeFlexibleStringList(forKey: .attribute(.url))
-        birthDate = try container.decodeIfPresent(String.self, forKey: .attribute(.birthDate))
-        sameAs = container.decodeFlexibleStringList(forKey: .attribute(.sameAs))
-        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
-        contactPoint = try container.decodeIfPresent(
-            [ContactPoint].self, forKey: .attribute(.contactPoint))
-        knowsLanguage = container.decodeFlexibleStringList(forKey: .attribute(.knowsLanguage))
-        spouse = try container.decodeIfPresent([Person].self, forKey: .attribute(.spouse))
-        children = try container.decodeIfPresent([Person].self, forKey: .attribute(.children))
-        siblings = try container.decodeIfPresent([Person].self, forKey: .attribute(.siblings))
-        parents = try container.decodeIfPresent([Person].self, forKey: .attribute(.parents))
-        relatedTo = try container.decodeIfPresent([Person].self, forKey: .attribute(.relatedTo))
+        name = try container.value(.name)
+        givenName = try container.value(.givenName)
+        familyName = try container.value(.familyName)
+        email = container.decodeFlexibleStringList(forKey: .email)
+        telephone = container.decodeFlexibleStringList(forKey: .telephone)
+        address = try container.value(.address)
+        jobTitle = try container.value(.jobTitle)
+        worksFor = try container.value(.worksFor)
+        url = container.decodeFlexibleStringList(forKey: .url)
+        birthDate = try container.value(.birthDate)
+        sameAs = container.decodeFlexibleStringList(forKey: .sameAs)
+        handles = try container.value(.handles)
+        contactPoint = try container.value(.contactPoint)
+        knowsLanguage = container.decodeFlexibleStringList(forKey: .knowsLanguage)
+        spouse = try container.value(.spouse)
+        children = try container.value(.children)
+        siblings = try container.value(.siblings)
+        parents = try container.value(.parents)
+        relatedTo = try container.value(.relatedTo)
     }
 }

@@ -14,16 +14,16 @@ struct QuantitativeValueTests {
         #expect(value.unitText == "m/s")
     }
 
-    @Test("JSON-LD encoding includes schema.org context")
-    func testJSONLDEncoding() throws {
+    @Test("Encoding carries the fields and no JSON-LD framing")
+    func testEncoding() throws {
         let value = QuantitativeValue(value: 20.5, unitCode: "MTS", unitText: "m/s")
 
         let encoder = JSONEncoder()
         let data = try encoder.encode(value)
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
-        #expect(json["@context"] as? String == "https://schema.org")
-        #expect(json["@type"] as? String == "QuantitativeValue")
+        #expect(json["@context"] == nil)
+        #expect(json["@type"] == nil)
         #expect(json["value"] as? Double == 20.5)
         #expect(json["unitCode"] as? String == "MTS")
         #expect(json["unitText"] as? String == "m/s")

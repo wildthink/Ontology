@@ -93,6 +93,7 @@ public struct Plan: Hashable, Sendable {
 
 extension Plan: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, status, startDate, endDate, dueDate
         case scoreCard
@@ -102,55 +103,53 @@ extension Plan: Codable {
     }
 
     public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try c.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try c.encodeIfPresent(name, forKey: .attribute(.name))
-        try c.encodeIfPresent(description, forKey: .attribute(.description))
-        try c.encodeIfPresent(status, forKey: .attribute(.status))
-        try c.encodeIfPresent(startDate, forKey: .attribute(.startDate))
-        try c.encodeIfPresent(endDate, forKey: .attribute(.endDate))
-        try c.encodeIfPresent(dueDate, forKey: .attribute(.dueDate))
-        try c.encodeIfPresent(location, forKey: .attribute(.location))
-        try c.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
-        try c.encodeIfPresent(rrule, forKey: .attribute(.rrule))
-        try c.encodeIfPresent(exceptDates, forKey: .attribute(.exceptDates))
-        try c.encodeIfPresent(tags, forKey: .attribute(.tags))
-        try c.encodeIfPresent(owner, forKey: .attribute(.owner))
-        try c.encodeIfPresent(participants, forKey: .attribute(.participants))
-        try c.encodeIfPresent(subject, forKey: .attribute(.subject))
-        try c.encodeIfPresent(effort, forKey: .attribute(.effort))
-        try c.encodeIfPresent(alarms, forKey: .attribute(.alarms))
-        try c.encodeIfPresent(handles, forKey: .attribute(.handles))
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(identifier, forKey: .identifier)
+        try c.encodeIfPresent(meta, forKey: .meta)
+        try c.encodeIfPresent(name, forKey: .name)
+        try c.encodeIfPresent(description, forKey: .description)
+        try c.encodeIfPresent(status, forKey: .status)
+        try c.encodeIfPresent(startDate, forKey: .startDate)
+        try c.encodeIfPresent(endDate, forKey: .endDate)
+        try c.encodeIfPresent(dueDate, forKey: .dueDate)
+        try c.encodeIfPresent(location, forKey: .location)
+        try c.encodeIfPresent(url?.absoluteString, forKey: .url)
+        try c.encodeIfPresent(rrule, forKey: .rrule)
+        try c.encodeIfPresent(exceptDates, forKey: .exceptDates)
+        try c.encodeIfPresent(tags, forKey: .tags)
+        try c.encodeIfPresent(owner, forKey: .owner)
+        try c.encodeIfPresent(participants, forKey: .participants)
+        try c.encodeIfPresent(subject, forKey: .subject)
+        try c.encodeIfPresent(effort, forKey: .effort)
+        try c.encodeIfPresent(alarms, forKey: .alarms)
+        try c.encodeIfPresent(handles, forKey: .handles)
         if !scoreCard.isEmpty {
-            try c.encode(scoreCard, forKey: .attribute(.scoreCard))
+            try c.encode(scoreCard, forKey: .scoreCard)
         }
-        try c.encodeIfPresent(meta, forKey: .attribute(.meta))
     }
 
     public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try c.decodeJSONLDHeader(Self.self)
-        meta = try c.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try c.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try c.decodeIfPresent(String.self, forKey: .attribute(.description))
-        status = try c.decodeIfPresent(String.self, forKey: .attribute(.status))
-        startDate = try c.decodeIfPresent(DateTime.self, forKey: .attribute(.startDate))
-        endDate = try c.decodeIfPresent(DateTime.self, forKey: .attribute(.endDate))
-        dueDate = try c.decodeIfPresent(DateTime.self, forKey: .attribute(.dueDate))
-        location = try c.decodeIfPresent(Place.self, forKey: .attribute(.location))
-        if let s = try c.decodeIfPresent(String.self, forKey: .attribute(.url)) { url = URL(string: s) }
-        rrule = try c.decodeIfPresent(String.self, forKey: .attribute(.rrule))
-        exceptDates = try c.decodeIfPresent([DateTime].self, forKey: .attribute(.exceptDates))
-        tags = try c.decodeIfPresent([String].self, forKey: .attribute(.tags))
-        owner = try c.decodeIfPresent(HolonRef.self, forKey: .attribute(.owner))
-        participants = try c.decodeIfPresent([HolonRef].self, forKey: .attribute(.participants))
-        subject = try c.decodeIfPresent(HolonRef.self, forKey: .attribute(.subject))
-        effort = try c.decodeIfPresent(QuantitativeValue.self, forKey: .attribute(.effort))
-        alarms = try c.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
-        handles = try c.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
-        scoreCard =
-            (try c.decodeIfPresent(ScoreCard.self, forKey: .attribute(.scoreCard)))
-            ?? []
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try c.value(.identifier)
+        meta = try c.value(.meta)
+        name = try c.value(.name)
+        description = try c.value(.description)
+        status = try c.value(.status)
+        startDate = try c.value(.startDate)
+        endDate = try c.value(.endDate)
+        dueDate = try c.value(.dueDate)
+        location = try c.value(.location)
+        url = try c.lenientURL(.url)
+        rrule = try c.value(.rrule)
+        exceptDates = try c.value(.exceptDates)
+        tags = try c.value(.tags)
+        owner = try c.value(.owner)
+        participants = try c.value(.participants)
+        subject = try c.value(.subject)
+        effort = try c.value(.effort)
+        alarms = try c.value(.alarms)
+        handles = try c.value(.handles)
+        scoreCard = try c.value(.scoreCard, or: [])
     }
 }
 

@@ -170,12 +170,15 @@ struct ScheduleTests {
         #expect(decoded.scheduleTimezone == "America/Los_Angeles")
     }
 
-    @Test("A mismatched @type is rejected")
-    func testTypeMismatch() {
+    /// `Schedule` is a value type with no identity and no type tag; a `@type`
+    /// left over from a wild-web record is ignored, not rejected. Routing a
+    /// record to the right hub type is `SchemaTypeRegistry`'s job.
+    @Test("A foreign @type is ignored rather than rejected")
+    func testForeignTypeIsIgnored() throws {
         let json = #"{"@type": "Person", "repeatFrequency": "P1W"}"#
-        #expect(throws: (any Error).self) {
-            try JSONDecoder().decode(Schedule.self, from: Data(json.utf8))
-        }
+        let schedule = try JSONDecoder().decode(Schedule.self, from: Data(json.utf8))
+
+        #expect(schedule.repeatFrequency == "P1W")
     }
 }
 

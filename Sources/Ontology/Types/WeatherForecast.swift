@@ -150,259 +150,240 @@ extension WeatherForecast: Codable {
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Encode @context if we're at the root level
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-
-        try container.encode(
-            "https://developer.apple.com/WeatherKit/#/WeatherForecast", forKey: .type)
+        var container = encoder.container(keyedBy: CodingKeys.self)
 
         // Basic info
-        try container.encode(DateTime(dateTime), forKey: .attribute(.dateTime))
-        try container.encodeIfPresent(symbolName, forKey: .attribute(.symbolName))
+        try container.encode(DateTime(dateTime), forKey: .dateTime)
+        try container.encodeIfPresent(symbolName, forKey: .symbolName)
 
         // Temperature
         if let temperature = temperature {
-            try container.encode(QuantitativeValue(temperature), forKey: .attribute(.temperature))
+            try container.encode(QuantitativeValue(temperature), forKey: .temperature)
         }
         if let apparentTemperature = apparentTemperature {
             try container.encode(
-                QuantitativeValue(apparentTemperature), forKey: .attribute(.apparentTemperature))
+                QuantitativeValue(apparentTemperature), forKey: .apparentTemperature)
         }
         if let lowTemperature = lowTemperature {
             try container.encode(
-                QuantitativeValue(lowTemperature), forKey: .attribute(.lowTemperature))
+                QuantitativeValue(lowTemperature), forKey: .lowTemperature)
         }
         if let highTemperature = highTemperature {
             try container.encode(
-                QuantitativeValue(highTemperature), forKey: .attribute(.highTemperature))
+                QuantitativeValue(highTemperature), forKey: .highTemperature)
         }
         if let highTemperatureTime = highTemperatureTime {
             try container.encode(
-                DateTime(highTemperatureTime), forKey: .attribute(.highTemperatureTime))
+                DateTime(highTemperatureTime), forKey: .highTemperatureTime)
         }
         if let lowTemperatureTime = lowTemperatureTime {
             try container.encode(
-                DateTime(lowTemperatureTime), forKey: .attribute(.lowTemperatureTime))
+                DateTime(lowTemperatureTime), forKey: .lowTemperatureTime)
         }
         if let dewPoint = dewPoint {
-            try container.encode(QuantitativeValue(dewPoint), forKey: .attribute(.dewPoint))
+            try container.encode(QuantitativeValue(dewPoint), forKey: .dewPoint)
         }
 
         // Humidity
         if let humidity = humidity {
             try container.encode(
-                QuantitativeValue.percentage(humidity), forKey: .attribute(.humidity))
+                QuantitativeValue.percentage(humidity), forKey: .humidity)
         }
         if let minimumHumidity = minimumHumidity {
             try container.encode(
-                QuantitativeValue.percentage(minimumHumidity), forKey: .attribute(.minimumHumidity))
+                QuantitativeValue.percentage(minimumHumidity), forKey: .minimumHumidity)
         }
         if let maximumHumidity = maximumHumidity {
             try container.encode(
-                QuantitativeValue.percentage(maximumHumidity), forKey: .attribute(.maximumHumidity))
+                QuantitativeValue.percentage(maximumHumidity), forKey: .maximumHumidity)
         }
 
         // Wind
         if let windSpeed = windSpeed {
-            try container.encode(QuantitativeValue(windSpeed), forKey: .attribute(.windSpeed))
+            try container.encode(QuantitativeValue(windSpeed), forKey: .windSpeed)
         }
         if let windDirection = windDirection {
             try container.encode(
-                QuantitativeValue(windDirection), forKey: .attribute(.windDirection))
+                QuantitativeValue(windDirection), forKey: .windDirection)
         }
 
         // Precipitation and conditions
-        try container.encodeIfPresent(condition, forKey: .attribute(.condition))
-        try container.encodeIfPresent(precipitation, forKey: .attribute(.precipitation))
+        try container.encodeIfPresent(condition, forKey: .condition)
+        try container.encodeIfPresent(precipitation, forKey: .precipitation)
         if let precipitationChance = precipitationChance {
             try container.encode(
                 QuantitativeValue.percentage(precipitationChance),
-                forKey: .attribute(.precipitationChance))
+                forKey: .precipitationChance)
         }
         if let precipitationIntensity = precipitationIntensity {
             try container.encode(
                 QuantitativeValue(precipitationIntensity),
-                forKey: .attribute(.precipitationIntensity))
+                forKey: .precipitationIntensity)
         }
         if let precipitationAmount = precipitationAmount {
             try container.encode(
-                QuantitativeValue(precipitationAmount), forKey: .attribute(.precipitationAmount))
+                QuantitativeValue(precipitationAmount), forKey: .precipitationAmount)
         }
         if let cloudCover = cloudCover {
             try container.encode(
-                QuantitativeValue.percentage(cloudCover), forKey: .attribute(.cloudCover))
+                QuantitativeValue.percentage(cloudCover), forKey: .cloudCover)
         }
         if let visibility = visibility {
-            try container.encode(QuantitativeValue(visibility), forKey: .attribute(.visibility))
+            try container.encode(QuantitativeValue(visibility), forKey: .visibility)
         }
 
         // Sun and Moon
-        try container.encodeIfPresent(uvIndex, forKey: .attribute(.uvIndex))
+        try container.encodeIfPresent(uvIndex, forKey: .uvIndex)
         if let sunRiseTime = sunRiseTime {
-            try container.encode(DateTime(sunRiseTime), forKey: .attribute(.sunRiseTime))
+            try container.encode(DateTime(sunRiseTime), forKey: .sunRiseTime)
         }
         if let sunSetTime = sunSetTime {
-            try container.encode(DateTime(sunSetTime), forKey: .attribute(.sunSetTime))
+            try container.encode(DateTime(sunSetTime), forKey: .sunSetTime)
         }
-        try container.encodeIfPresent(moonPhase, forKey: .attribute(.moonPhase))
+        try container.encodeIfPresent(moonPhase, forKey: .moonPhase)
         if let moonriseTime = moonriseTime {
-            try container.encode(DateTime(moonriseTime), forKey: .attribute(.moonriseTime))
+            try container.encode(DateTime(moonriseTime), forKey: .moonriseTime)
         }
         if let moonsetTime = moonsetTime {
-            try container.encode(DateTime(moonsetTime), forKey: .attribute(.moonsetTime))
+            try container.encode(DateTime(moonsetTime), forKey: .moonsetTime)
         }
-        try container.encodeIfPresent(isDaylight, forKey: .attribute(.isDaylight))
+        try container.encodeIfPresent(isDaylight, forKey: .isDaylight)
 
         // Pressure
         if let pressure = pressure {
-            try container.encode(QuantitativeValue(pressure), forKey: .attribute(.pressure))
+            try container.encode(QuantitativeValue(pressure), forKey: .pressure)
         }
-        try container.encodeIfPresent(pressureTrend, forKey: .attribute(.pressureTrend))
+        try container.encodeIfPresent(pressureTrend, forKey: .pressureTrend)
 
         // Provider attribution (set by the producing bridge/backend)
-        try container.encodeIfPresent(provider, forKey: .attribute(.provider))
-        try container.encodeIfPresent(attribution, forKey: .attribute(.attribution))
-        try container.encodeIfPresent(attributionLink, forKey: .attribute(.attributionLink))
+        try container.encodeIfPresent(provider, forKey: .provider)
+        try container.encodeIfPresent(attribution, forKey: .attribution)
+        try container.encodeIfPresent(attributionLink, forKey: .attributionLink)
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Verify type
-        let expectedType = "https://developer.apple.com/WeatherKit/#/WeatherForecast"
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == expectedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(expectedType)', but found \(decodedType)"
-            )
-        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
         // Basic info
-        dateTime = try container.decode(DateTime.self, forKey: .attribute(.dateTime)).value
-        symbolName = try container.decodeIfPresent(String.self, forKey: .attribute(.symbolName))
+        dateTime = try container.decode(DateTime.self, forKey: .dateTime).value
+        symbolName = try container.decodeIfPresent(String.self, forKey: .symbolName)
 
         // Temperature
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.temperature))
+            QuantitativeValue.self, forKey: .temperature)
         {
             temperature = value.measurement(as: UnitTemperature.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.apparentTemperature))
+            QuantitativeValue.self, forKey: .apparentTemperature)
         {
             apparentTemperature = value.measurement(as: UnitTemperature.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.lowTemperature))
+            QuantitativeValue.self, forKey: .lowTemperature)
         {
             lowTemperature = value.measurement(as: UnitTemperature.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.highTemperature))
+            QuantitativeValue.self, forKey: .highTemperature)
         {
             highTemperature = value.measurement(as: UnitTemperature.self)
         }
         highTemperatureTime = try container.decodeIfPresent(
-            DateTime.self, forKey: .attribute(.highTemperatureTime))?.value
+            DateTime.self, forKey: .highTemperatureTime)?.value
         lowTemperatureTime = try container.decodeIfPresent(
-            DateTime.self, forKey: .attribute(.lowTemperatureTime))?.value
+            DateTime.self, forKey: .lowTemperatureTime)?.value
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.dewPoint))
+            QuantitativeValue.self, forKey: .dewPoint)
         {
             dewPoint = value.measurement(as: UnitTemperature.self)
         }
 
         // Humidity
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.humidity))
+            QuantitativeValue.self, forKey: .humidity)
         {
             humidity = value.value / 100.0
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.minimumHumidity))
+            QuantitativeValue.self, forKey: .minimumHumidity)
         {
             minimumHumidity = value.value / 100.0
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.maximumHumidity))
+            QuantitativeValue.self, forKey: .maximumHumidity)
         {
             maximumHumidity = value.value / 100.0
         }
 
         // Wind
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.windSpeed))
+            QuantitativeValue.self, forKey: .windSpeed)
         {
             windSpeed = value.measurement(as: UnitSpeed.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.windDirection))
+            QuantitativeValue.self, forKey: .windDirection)
         {
             windDirection = value.measurement(as: UnitAngle.self)
         }
 
         // Precipitation and conditions
-        condition = try container.decodeIfPresent(String.self, forKey: .attribute(.condition))
+        condition = try container.decodeIfPresent(String.self, forKey: .condition)
         precipitation = try container.decodeIfPresent(
-            String.self, forKey: .attribute(.precipitation))
+            String.self, forKey: .precipitation)
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.precipitationChance))
+            QuantitativeValue.self, forKey: .precipitationChance)
         {
             precipitationChance = value.value / 100.0
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.precipitationIntensity))
+            QuantitativeValue.self, forKey: .precipitationIntensity)
         {
             precipitationIntensity = value.measurement(as: UnitSpeed.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.precipitationAmount))
+            QuantitativeValue.self, forKey: .precipitationAmount)
         {
             precipitationAmount = value.measurement(as: UnitLength.self)
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.cloudCover))
+            QuantitativeValue.self, forKey: .cloudCover)
         {
             cloudCover = value.value / 100.0
         }
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.visibility))
+            QuantitativeValue.self, forKey: .visibility)
         {
             visibility = value.measurement(as: UnitLength.self)
         }
 
         // Sun and Moon
-        uvIndex = try container.decodeIfPresent(Int.self, forKey: .attribute(.uvIndex))
+        uvIndex = try container.decodeIfPresent(Int.self, forKey: .uvIndex)
         sunRiseTime = try container.decodeIfPresent(
-            DateTime.self, forKey: .attribute(.sunRiseTime))?.value
-        sunSetTime = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.sunSetTime))?
+            DateTime.self, forKey: .sunRiseTime)?.value
+        sunSetTime = try container.decodeIfPresent(DateTime.self, forKey: .sunSetTime)?
             .value
-        moonPhase = try container.decodeIfPresent(String.self, forKey: .attribute(.moonPhase))
+        moonPhase = try container.decodeIfPresent(String.self, forKey: .moonPhase)
         moonriseTime = try container.decodeIfPresent(
-            DateTime.self, forKey: .attribute(.moonriseTime))?.value
+            DateTime.self, forKey: .moonriseTime)?.value
         moonsetTime = try container.decodeIfPresent(
-            DateTime.self, forKey: .attribute(.moonsetTime))?.value
-        isDaylight = try container.decodeIfPresent(Bool.self, forKey: .attribute(.isDaylight))
+            DateTime.self, forKey: .moonsetTime)?.value
+        isDaylight = try container.decodeIfPresent(Bool.self, forKey: .isDaylight)
 
         // Pressure and Visibility
         if let value = try container.decodeIfPresent(
-            QuantitativeValue.self, forKey: .attribute(.pressure))
+            QuantitativeValue.self, forKey: .pressure)
         {
             pressure = value.measurement(as: UnitPressure.self)
         }
         pressureTrend = try container.decodeIfPresent(
-            String.self, forKey: .attribute(.pressureTrend))
+            String.self, forKey: .pressureTrend)
 
         // Attribution
-        provider = try container.decodeIfPresent(String.self, forKey: .attribute(.provider))
-        attribution = try container.decodeIfPresent(String.self, forKey: .attribute(.attribution))
+        provider = try container.decodeIfPresent(String.self, forKey: .provider)
+        attribution = try container.decodeIfPresent(String.self, forKey: .attribution)
         attributionLink = try container.decodeIfPresent(
-            String.self, forKey: .attribute(.attributionLink))
+            String.self, forKey: .attributionLink)
     }
 }

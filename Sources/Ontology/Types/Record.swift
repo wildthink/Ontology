@@ -39,34 +39,21 @@ public struct Record: Hashable, Sendable {
 
 extension Record: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, subject, outcome, recordedAt, url
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(subject, forKey: .attribute(.subject))
-        try container.encodeIfPresent(outcome, forKey: .attribute(.outcome))
-        try container.encodeIfPresent(recordedAt, forKey: .attribute(.recordedAt))
-        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
-    }
-
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        subject = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.subject))
-        outcome = try container.decodeIfPresent(String.self, forKey: .attribute(.outcome))
-        recordedAt = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.recordedAt))
-        if let s = try container.decodeIfPresent(String.self, forKey: .attribute(.url)) {
-            url = URL(string: s)
-        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.value(.identifier)
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        subject = try container.value(.subject)
+        outcome = try container.value(.outcome)
+        recordedAt = try container.value(.recordedAt)
+        url = try container.lenientURL(.url)
     }
 }
 

@@ -6,8 +6,7 @@ private let frontmatterKeyPriority = ["taxon", "id"]
 extension MarkdownDocument {
     /// Create a MarkdownDocument from any Entity, ready to write to disk.
     ///
-    /// YAML frontmatter is derived from the entity's JSON-LD encoding with key
-    /// normalisation: `@context` removed, `@type` → `taxon`, `@id` → `id`.
+    /// YAML frontmatter is the entity's own JSON encoding plus a `taxon` key.
     /// Null and empty optional fields are omitted.
     public init<T: Entity & Encodable>(_ entity: T, body: String = "") throws {
         let data = try JSONEncoder().encode(entity)
@@ -33,19 +32,14 @@ extension MarkdownDocument {
 // MARK: - Key transformation (JSON-LD → native frontmatter)
 
 private extension MarkdownDocument {
-    /// Transform a JSON-LD encoded object into a frontmatter-ready JSON object:
-    /// removes `@context`, renames `@type` → `taxon` (at top level only),
-    /// renames `@id` → `id`, drops nulls, and recurses into nested objects.
+    /// Transform an encoded entity into a frontmatter-ready JSON object: stamps
+    /// `taxon` (at top level only), drops nulls, and recurses into nested
+    /// objects. Hub types encode plain field names, so there is no JSON-LD
+    /// framing left to strip here — see `JSONLD` for the framing direction.
     static func frontmatterObject(from json: JSON, taxon: Taxon) -> JSON {
         guard var obj = json.object else { return json }
-        obj.removeValue(forKey: "@context")
-        obj.removeValue(forKey: "@type")
         if !taxon.description.isEmpty {
             obj["taxon"] = .string(taxon.description)
-        }
-        if let id = obj["@id"] {
-            obj.removeValue(forKey: "@id")
-            obj["id"] = id
         }
         let cleaned = obj.compactMapValues { value -> JSON? in
             guard !value.isNull else { return nil }

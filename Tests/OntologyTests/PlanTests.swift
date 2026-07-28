@@ -30,7 +30,7 @@ struct PlanTests {
         #expect(plan.parts.isEmpty)
     }
 
-    @Test("JSON-LD encoding includes all set fields")
+    @Test("Encoding includes all set fields and no JSON-LD framing")
     func testEncoding() throws {
         let plan = Plan(
             identifier: "plan.abc12345",
@@ -42,12 +42,27 @@ struct PlanTests {
         let data = try JSONEncoder().encode(plan)
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
-        #expect(json["@context"] as? String == "https://schema.org")
-        #expect(json["@type"] as? String == "Plan")
-        #expect(json["@id"] as? String == "plan.abc12345")
+        #expect(json["id"] as? String == "plan.abc12345")
         #expect(json["name"] as? String == "Campaign Kickoff")
         #expect(json["rrule"] as? String == "FREQ=WEEKLY;BYDAY=FR")
         #expect((json["tags"] as? [String])?.contains("campaign") == true)
+
+        // Framing belongs to the JSON-LD boundary, not to the hub type.
+        #expect(json["@context"] == nil)
+        #expect(json["@type"] == nil)
+        #expect(json["@id"] == nil)
+    }
+
+    @Test("JSONLD.object frames the plan as schema.org")
+    func testJSONLDEnvelope() throws {
+        let plan = Plan(identifier: "plan.abc12345", name: "Campaign Kickoff")
+        let json = try JSONLD.object(plan)
+
+        #expect(json["@context"]?.string == "https://schema.org")
+        #expect(json["@type"]?.string == "Plan")
+        #expect(json["@id"]?.string == "plan.abc12345")
+        #expect(json["id"] == nil)
+        #expect(json["name"]?.string == "Campaign Kickoff")
     }
 
     @Test("JSON-LD round-trip preserves all fields")

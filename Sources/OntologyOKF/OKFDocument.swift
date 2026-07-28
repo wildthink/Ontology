@@ -13,11 +13,10 @@ let okfDateFields = ["startDate", "endDate", "dueDate", "recordedAt", "scheduled
 /// An OKF v0.1-compliant markdown document produced from a hub `Entity`.
 ///
 /// Key mapping (hub → OKF):
-/// - `@type`  → `type`  (required)
+/// - Swift type name → `type` (required)
 /// - `name`   → `title` (recommended); for `Person`, derived from givenName + familyName
 /// - `url`    → `resource`
-/// - `@id`    → `id`    (extension field; OKF must preserve unknown keys)
-/// - `@context` removed
+/// - `id` is already the hub's own key and passes through unchanged
 /// - First available date field → `timestamp`
 /// - All other fields preserved as OKF extension keys.
 public struct OKFDocument {
@@ -27,7 +26,7 @@ public struct OKFDocument {
     public init<T: Entity & Encodable>(_ entity: T, body: String = "") throws {
         let data = try JSONEncoder().encode(entity)
         let json = try JSON.parse(data)
-        let fm = Self.okfObject(from: json)
+        let fm = Self.okfObject(from: json, type: String(describing: T.self))
         self.frontmatter = YAMLSerializer.serialize(fm, keyPriority: okfKeyPriority)
         self.body = body
     }
@@ -44,26 +43,16 @@ public struct OKFDocument {
     }
 }
 
-// MARK: - JSON-LD → OKF key transformation
+// MARK: - hub → OKF key transformation
 
 private extension OKFDocument {
-    static func okfObject(from json: JSON) -> JSON {
+    /// - Parameter type: the OKF `type` field, supplied by the caller from the
+    ///   Swift type name. Only the top-level object gets one; nested values are
+    ///   transformed with `type: nil`.
+    static func okfObject(from json: JSON, type: String?) -> JSON {
         guard var obj = json.object else { return json }
 
-        // @context — drop
-        obj.removeValue(forKey: "@context")
-
-        // @type → type
-        if let typeVal = obj["@type"] {
-            obj["type"] = typeVal
-            obj.removeValue(forKey: "@type")
-        }
-
-        // @id → id
-        if let id = obj["@id"] {
-            obj["id"] = id
-            obj.removeValue(forKey: "@id")
-        }
+        if let type { obj["type"] = .string(type) }
 
         // name → title; keep name as extension for round-trip
         if let name = obj["name"] {
@@ -102,10 +91,11 @@ private extension OKFDocument {
     }
 
     /// Applies `okfObject` transformation through objects and arrays of objects,
-    /// so nested entities (e.g. `OutlineNode` inside `Outline.nodes`) also get
-    /// their `@type`/`@id` stripped instead of leaking raw JSON-LD keys into YAML.
+    /// so nested entities (e.g. `OutlineNode` inside `Outline.nodes`) get the
+    /// same `name` → `title` treatment. `type` is document-level, so nested
+    /// objects do not receive one.
     static func okfValue(_ value: JSON) -> JSON {
-        if value.object != nil { return okfObject(from: value) }
+        if value.object != nil { return okfObject(from: value, type: nil) }
         if let arr = value.array {
             return .array(arr.compactMap { $0.isNull ? nil : okfValue($0) })
         }

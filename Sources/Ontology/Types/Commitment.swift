@@ -49,36 +49,9 @@ public struct Commitment: Hashable, Sendable {
 
 extension Commitment: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, plan, actor, recipient, role, status, dueDate, note
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(plan, forKey: .attribute(.plan))
-        try container.encodeIfPresent(actor, forKey: .attribute(.actor))
-        try container.encodeIfPresent(recipient, forKey: .attribute(.recipient))
-        try container.encodeIfPresent(role, forKey: .attribute(.role))
-        try container.encodeIfPresent(status, forKey: .attribute(.status))
-        try container.encodeIfPresent(dueDate, forKey: .attribute(.dueDate))
-        try container.encodeIfPresent(note, forKey: .attribute(.note))
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
-        actor = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.actor))
-        recipient = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.recipient))
-        role = try container.decodeIfPresent(String.self, forKey: .attribute(.role))
-        status = try container.decodeIfPresent(String.self, forKey: .attribute(.status))
-        dueDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.dueDate))
-        note = try container.decodeIfPresent(String.self, forKey: .attribute(.note))
     }
 }
 

@@ -71,44 +71,28 @@ public struct Task: Hashable, Sendable {
 
 extension Task: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, plan, assignee, dueDate, schedulingIntent, status, statusChangedAt
         case priority, alarms, handles
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(plan, forKey: .attribute(.plan))
-        try container.encodeIfPresent(assignee, forKey: .attribute(.assignee))
-        try container.encodeIfPresent(dueDate, forKey: .attribute(.dueDate))
-        try container.encodeIfPresent(schedulingIntent?.rawValue, forKey: .attribute(.schedulingIntent))
-        try container.encode(status.rawValue, forKey: .attribute(.status))
-        try container.encodeIfPresent(statusChangedAt, forKey: .attribute(.statusChangedAt))
-        try container.encodeIfPresent(priority, forKey: .attribute(.priority))
-        try container.encodeIfPresent(alarms, forKey: .attribute(.alarms))
-        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
-    }
-
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
-        assignee = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.assignee))
-        dueDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.dueDate))
-        let rawSchedulingIntent = try container.decodeIfPresent(String.self, forKey: .attribute(.schedulingIntent))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.value(.identifier)
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        plan = try container.value(.plan)
+        assignee = try container.value(.assignee)
+        dueDate = try container.value(.dueDate)
+        let rawSchedulingIntent: String? = try container.value(.schedulingIntent)
         schedulingIntent = rawSchedulingIntent.flatMap(SchedulingIntent.init(rawValue:))
-        let rawStatus = try container.decodeIfPresent(String.self, forKey: .attribute(.status))
+        let rawStatus: String? = try container.value(.status)
         status = rawStatus.flatMap(Status.init(rawValue:)) ?? .open
-        statusChangedAt = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.statusChangedAt))
-        priority = try container.decodeIfPresent(Int.self, forKey: .attribute(.priority))
-        alarms = try container.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
-        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
+        statusChangedAt = try container.value(.statusChangedAt)
+        priority = try container.value(.priority)
+        alarms = try container.value(.alarms)
+        handles = try container.value(.handles)
     }
 }

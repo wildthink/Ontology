@@ -1,87 +1,87 @@
-public enum JSONLDCodingKey<T: CodingKey>: CodingKey {
-    case context
-    case type
-    case id
-    case attribute(T)
+import Foundation
+import Universal
 
-    public var stringValue: String {
-        switch self {
-        case .context: return "@context"
-        case .type: return "@type"
-        case .id: return "@id"
-        case .attribute(let key): return key.stringValue
-        }
+// MARK: - Framing at the boundary
+
+/// Hub types encode as plain JSON — field names, `id`, no `@`-prefixed keys.
+/// JSON-LD framing is applied here, at the boundary, only when a schema.org
+/// record is what's wanted.
+///
+/// This is the write direction. The read direction is `SchemaTypeRegistry`,
+/// which routes a wild-web `@type` onto the best-fitting hub type; nothing
+/// else in the package needs to understand JSON-LD.
+public enum JSONLD {
+
+    /// Frame a hub entity as a schema.org JSON-LD object: adds `@context` and
+    /// `@type`, and renames `id` to `@id`.
+    public static func object(_ entity: some Entity, context: String = schema.org.rawValue) throws -> JSON {
+        let json = try JSON.parse(JSONEncoder().encode(entity))
+        return framed(json, type: String(describing: type(of: entity)), context: context)
     }
 
-    public init?(stringValue: String) {
-        switch stringValue {
-        case "@context": self = .context
-        case "@type": self = .type
-        case "@id": self = .id
-        default:
-            // Try to initialize the underlying key type
-            if let key = T(stringValue: stringValue) {
-                self = .attribute(key)
+    /// Frame a hub entity as serialised JSON-LD.
+    public static func data(_ entity: some Entity, context: String = schema.org.rawValue) throws -> Data {
+        Data(try object(entity, context: context).canonicalJSON.utf8)
+    }
+
+    /// schema.org type names for the nested value objects the hub embeds.
+    /// Nested objects have no Swift type available at the JSON level, so the
+    /// field name supplies it. Anything not listed is emitted untyped, which
+    /// is valid JSON-LD.
+    private static let nestedTypeNames: [String: String] = [
+        "geo": "GeoCoordinates",
+        "address": "PostalAddress",
+        "place": "Place",
+        "location": "Place",
+        "organizer": "Person",
+        "effort": "QuantitativeValue",
+        "contactPoint": "ContactPoint",
+    ]
+
+    private static func framed(_ json: JSON, type: String?, context: String?) -> JSON {
+        guard var obj = json.object else { return json }
+        if let context { obj["@context"] = .string(context) }
+        if let type { obj["@type"] = .string(type) }
+        if let id = obj["id"] {
+            obj.removeValue(forKey: "id")
+            obj["@id"] = id
+        }
+        for (key, value) in obj where value.object != nil || value.array != nil {
+            // `meta` is an opaque bag — its contents are not schema.org terms.
+            guard key != "meta" else { continue }
+            let nestedType = nestedTypeNames[key]
+            if let array = value.array {
+                obj[key] = .array(array.map { framed($0, type: nestedType, context: nil) })
             } else {
-                return nil
+                obj[key] = framed(value, type: nestedType, context: nil)
             }
         }
-    }
-
-    public var intValue: Int? { nil }
-    public init?(intValue: Int) { nil }
-}
-
-// MARK: - JSON-LD header
-
-/// The three JSON-LD framing keys (`@context`, `@type`, `@id`) are written and
-/// validated identically by every hub type. These helpers are the single
-/// enforcement point: a type either calls them or visibly does not, which is
-/// what keeps the rule from drifting the way hand-written copies did.
-extension KeyedEncodingContainer {
-    /// Writes the JSON-LD header: `@context` (root only), `@type`, and `@id`.
-    ///
-    /// - Parameters:
-    ///   - type: the Swift type being encoded — its name becomes `@type`.
-    ///   - id: the entity's `identifier`, written as `@id` when present.
-    ///   - encoder: used to detect root position (`codingPath.isEmpty`), since
-    ///     `@context` belongs only at the top of a document.
-    public mutating func encodeJSONLDHeader<Attribute>(
-        _ type: Any.Type,
-        id: String? = nil,
-        encoder: Encoder
-    ) throws where Key == JSONLDCodingKey<Attribute> {
-        if encoder.codingPath.isEmpty {
-            try encode(schema.org, forKey: .context)
-        }
-        try encode(String(describing: type), forKey: .type)
-        try encodeIfPresent(id, forKey: .id)
+        return .object(obj)
     }
 }
+
+// MARK: - Decoding helpers
 
 extension KeyedDecodingContainer {
-    /// Validates the JSON-LD `@type` when present and returns the decoded `@id`.
+    /// An optional field: an absent key decodes to nil.
     ///
-    /// `@type` is absent in YAML frontmatter and stripped from wild-web records
-    /// by `SchemaTypeRegistry`, so absence is always valid; only a *present and
-    /// mismatched* `@type` throws. This is the `decodeIfPresent` rule that every
-    /// hub type is required to follow, in one callable place.
-    ///
-    /// - Parameter type: the Swift type being decoded — its name is the expected `@type`.
-    /// - Returns: the `@id` value, to assign to `identifier`.
-    @discardableResult
-    public func decodeJSONLDHeader<Attribute>(
-        _ type: Any.Type
-    ) throws -> String? where Key == JSONLDCodingKey<Attribute> {
-        let expected = String(describing: type)
-        if let found = try decodeIfPresent(String.self, forKey: .type), found != expected {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: self,
-                debugDescription: "Expected @type '\(expected)' but found '\(found)'"
-            )
-        }
-        return try decodeIfPresent(String.self, forKey: .id)
+    /// Shorthand for `decodeIfPresent`, which every optional hub field needs —
+    /// frontmatter and wild-web records both omit far more than they carry.
+    public func value<T: Decodable>(_ key: Key) throws -> T? {
+        try decodeIfPresent(T.self, forKey: key)
+    }
+
+    /// A field with a default: an absent key decodes to `fallback`.
+    public func value<T: Decodable>(_ key: Key, or fallback: T) throws -> T {
+        try decodeIfPresent(T.self, forKey: key) ?? fallback
+    }
+
+    /// A URL field: a string `URL(string:)` rejects decodes to nil rather than
+    /// failing the whole record. Decoding `URL` directly would throw, and a
+    /// junk `url` is not a reason to lose an otherwise good wild-web record.
+    public func lenientURL(_ key: Key) throws -> URL? {
+        guard let string = try decodeIfPresent(String.self, forKey: key) else { return nil }
+        return URL(string: string)
     }
 }
 

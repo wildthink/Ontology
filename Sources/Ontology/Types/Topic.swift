@@ -42,29 +42,8 @@ public struct Topic: Hashable, Sendable {
 
 extension Topic: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, relatedTopics, tags
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(relatedTopics, forKey: .attribute(.relatedTopics))
-        try container.encodeIfPresent(tags, forKey: .attribute(.tags))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        identifier = try container.decodeJSONLDHeader(Self.self)
-
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        relatedTopics = try container.decodeIfPresent([HolonRef].self, forKey: .attribute(.relatedTopics))
-        tags = try container.decodeIfPresent([String].self, forKey: .attribute(.tags))
     }
 }

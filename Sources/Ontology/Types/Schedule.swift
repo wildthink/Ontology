@@ -151,10 +151,14 @@ extension Schedule {
             scheduleTimezone: calendar.timeZone.identifier
         )
         // `RecurrenceRule.End` is a struct with optional accessors, not an enum.
-        if let occurrences = rule.end.occurrences {
-            repeatCount = occurrences
-        } else if let until = rule.end.date {
-            endDate = DateTime(until, timeZone: calendar.timeZone)
+        if #available(iOS 18.2, *) {
+            if let occurrences = rule.end.occurrences {
+                repeatCount = occurrences
+            } else if let until = rule.end.date {
+                endDate = DateTime(until, timeZone: calendar.timeZone)
+            }
+        } else {
+            // Fallback on earlier versions
         }
     }
 
@@ -293,42 +297,23 @@ extension Schedule: Codable {
         case scheduleTimezone, exceptDate
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try c.encodeJSONLDHeader(Self.self, encoder: encoder)
-        try c.encodeIfPresent(repeatFrequency, forKey: .attribute(.repeatFrequency))
-        try c.encodeIfPresent(repeatCount, forKey: .attribute(.repeatCount))
-        try c.encodeIfPresent(byDay, forKey: .attribute(.byDay))
-        try c.encodeIfPresent(byMonth, forKey: .attribute(.byMonth))
-        try c.encodeIfPresent(byMonthDay, forKey: .attribute(.byMonthDay))
-        try c.encodeIfPresent(byMonthWeek, forKey: .attribute(.byMonthWeek))
-        try c.encodeIfPresent(startDate, forKey: .attribute(.startDate))
-        try c.encodeIfPresent(endDate, forKey: .attribute(.endDate))
-        try c.encodeIfPresent(startTime, forKey: .attribute(.startTime))
-        try c.encodeIfPresent(endTime, forKey: .attribute(.endTime))
-        try c.encodeIfPresent(duration, forKey: .attribute(.duration))
-        try c.encodeIfPresent(scheduleTimezone, forKey: .attribute(.scheduleTimezone))
-        try c.encodeIfPresent(exceptDate, forKey: .attribute(.exceptDate))
-    }
-
     public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        _ = try c.decodeJSONLDHeader(Self.self)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
         // `repeatFrequency` arrives as a duration string or, in sloppy records, a
         // bare number of days; `byDay`/`byMonth*` are singular-or-array like every
         // other repeatable schema.org property.
-        repeatFrequency = try c.decodeStringLeniently(forKey: .attribute(.repeatFrequency))
-        repeatCount = try c.decodeIfPresent(Int.self, forKey: .attribute(.repeatCount))
-        byDay = c.decodeFlexibleStringList(forKey: .attribute(.byDay))
-        byMonth = c.decodeFlexibleIntList(forKey: .attribute(.byMonth))
-        byMonthDay = c.decodeFlexibleIntList(forKey: .attribute(.byMonthDay))
-        byMonthWeek = c.decodeFlexibleIntList(forKey: .attribute(.byMonthWeek))
-        startDate = try c.decodeIfPresent(DateTime.self, forKey: .attribute(.startDate))
-        endDate = try c.decodeIfPresent(DateTime.self, forKey: .attribute(.endDate))
-        startTime = try c.decodeStringLeniently(forKey: .attribute(.startTime))
-        endTime = try c.decodeStringLeniently(forKey: .attribute(.endTime))
-        duration = try c.decodeStringLeniently(forKey: .attribute(.duration))
-        scheduleTimezone = try c.decodeStringLeniently(forKey: .attribute(.scheduleTimezone))
-        exceptDate = try c.decodeIfPresent([DateTime].self, forKey: .attribute(.exceptDate))
+        repeatFrequency = try c.decodeStringLeniently(forKey: .repeatFrequency)
+        repeatCount = try c.value(.repeatCount)
+        byDay = c.decodeFlexibleStringList(forKey: .byDay)
+        byMonth = c.decodeFlexibleIntList(forKey: .byMonth)
+        byMonthDay = c.decodeFlexibleIntList(forKey: .byMonthDay)
+        byMonthWeek = c.decodeFlexibleIntList(forKey: .byMonthWeek)
+        startDate = try c.value(.startDate)
+        endDate = try c.value(.endDate)
+        startTime = try c.decodeStringLeniently(forKey: .startTime)
+        endTime = try c.decodeStringLeniently(forKey: .endTime)
+        duration = try c.decodeStringLeniently(forKey: .duration)
+        scheduleTimezone = try c.decodeStringLeniently(forKey: .scheduleTimezone)
+        exceptDate = try c.value(.exceptDate)
     }
 }

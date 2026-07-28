@@ -79,48 +79,28 @@ extension Occurrence {
 
 extension Occurrence: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, startDate, endDate
         case place, location, url, organizer, attendees = "attendee", status = "eventStatus", plan, alarms, handles
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(startDate, forKey: .attribute(.startDate))
-        try container.encodeIfPresent(endDate, forKey: .attribute(.endDate))
-        try container.encodeIfPresent(place, forKey: .attribute(.place))
-        try container.encodeIfPresent(location, forKey: .attribute(.location))
-        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
-        try container.encodeIfPresent(organizer, forKey: .attribute(.organizer))
-        try container.encodeIfPresent(attendees, forKey: .attribute(.attendees))
-        try container.encodeIfPresent(status, forKey: .attribute(.status))
-        try container.encodeIfPresent(plan, forKey: .attribute(.plan))
-        try container.encodeIfPresent(alarms, forKey: .attribute(.alarms))
-        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
-    }
-
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        startDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.startDate))
-        endDate = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.endDate))
-        place = try container.decodeIfPresent(Place.self, forKey: .attribute(.place))
-        location = try container.decodeIfPresent(String.self, forKey: .attribute(.location))
-        if let urlString = try container.decodeIfPresent(String.self, forKey: .attribute(.url)) {
-            url = URL(string: urlString)
-        }
-        organizer = try container.decodeIfPresent(Person.self, forKey: .attribute(.organizer))
-        attendees = try container.decodeIfPresent([Person].self, forKey: .attribute(.attendees))
-        status = try container.decodeIfPresent(String.self, forKey: .attribute(.status))
-        plan = try container.decodeIfPresent(HolonRef.self, forKey: .attribute(.plan))
-        alarms = try container.decodeIfPresent([Alarm].self, forKey: .attribute(.alarms))
-        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.value(.identifier)
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        startDate = try container.value(.startDate)
+        endDate = try container.value(.endDate)
+        place = try container.value(.place)
+        location = try container.value(.location)
+        url = try container.lenientURL(.url)
+        organizer = try container.value(.organizer)
+        attendees = try container.value(.attendees)
+        status = try container.value(.status)
+        plan = try container.value(.plan)
+        alarms = try container.value(.alarms)
+        handles = try container.value(.handles)
     }
 }

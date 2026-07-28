@@ -72,60 +72,39 @@ extension WeatherConditions: Codable {
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Encode @context if we're at the root level
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-
-        // Encode @type
-        try container.encode(
-            "https://developer.apple.com/WeatherKit/#/WeatherConditions", forKey: .type)
+        var container = encoder.container(keyedBy: CodingKeys.self)
 
         // Encode properties
-        try container.encode(QuantitativeValue(temperature), forKey: .attribute(.temperature))
+        try container.encode(QuantitativeValue(temperature), forKey: .temperature)
         try container.encode(
-            QuantitativeValue(apparentTemperature), forKey: .attribute(.apparentTemperature))
-        try container.encode(QuantitativeValue.percentage(humidity), forKey: .attribute(.humidity))
-        try container.encode(QuantitativeValue(windSpeed), forKey: .attribute(.windSpeed))
-        try container.encode(condition, forKey: .attribute(.condition))
+            QuantitativeValue(apparentTemperature), forKey: .apparentTemperature)
+        try container.encode(QuantitativeValue.percentage(humidity), forKey: .humidity)
+        try container.encode(QuantitativeValue(windSpeed), forKey: .windSpeed)
+        try container.encode(condition, forKey: .condition)
         if let precipitationChance = precipitationChance {
             try container.encode(
                 QuantitativeValue.percentage(precipitationChance),
-                forKey: .attribute(.precipitationChance))
+                forKey: .precipitationChance)
         }
-        try container.encode(DateTime(dateTime), forKey: .attribute(.dateTime))
+        try container.encode(DateTime(dateTime), forKey: .dateTime)
 
         // Provider attribution (set by the producing bridge/backend)
-        try container.encodeIfPresent(provider, forKey: .attribute(.provider))
-        try container.encodeIfPresent(attribution, forKey: .attribute(.attribution))
-        try container.encodeIfPresent(attributionLink, forKey: .attribute(.attributionLink))
+        try container.encodeIfPresent(provider, forKey: .provider)
+        try container.encodeIfPresent(attribution, forKey: .attribution)
+        try container.encodeIfPresent(attributionLink, forKey: .attributionLink)
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        // Verify type is correct
-        let expectedType = "https://developer.apple.com/WeatherKit/#/WeatherConditions"
-        let decodedType = try container.decode(String.self, forKey: .type)
-        guard decodedType == expectedType else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription:
-                    "Expected type to be '\(expectedType)', but found \(decodedType)"
-            )
-        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
         // Decode properties
-        dateTime = try container.decode(DateTime.self, forKey: .attribute(.dateTime)).value
+        dateTime = try container.decode(DateTime.self, forKey: .dateTime).value
 
         let tempValue = try container.decode(
-            QuantitativeValue.self, forKey: .attribute(.temperature))
+            QuantitativeValue.self, forKey: .temperature)
         guard let temp = tempValue.measurement(as: UnitTemperature.self) else {
             throw DecodingError.dataCorruptedError(
-                forKey: .attribute(.temperature),
+                forKey: .temperature,
                 in: container,
                 debugDescription: "Could not convert temperature QuantitativeValue to Measurement"
             )
@@ -133,10 +112,10 @@ extension WeatherConditions: Codable {
         temperature = temp
 
         let apparentTempValue = try container.decode(
-            QuantitativeValue.self, forKey: .attribute(.apparentTemperature))
+            QuantitativeValue.self, forKey: .apparentTemperature)
         guard let apparentTemp = apparentTempValue.measurement(as: UnitTemperature.self) else {
             throw DecodingError.dataCorruptedError(
-                forKey: .attribute(.apparentTemperature),
+                forKey: .apparentTemperature,
                 in: container,
                 debugDescription:
                     "Could not convert apparent temperature QuantitativeValue to Measurement"
@@ -145,32 +124,32 @@ extension WeatherConditions: Codable {
         apparentTemperature = apparentTemp
 
         let humidityValue = try container.decode(
-            QuantitativeValue.self, forKey: .attribute(.humidity))
+            QuantitativeValue.self, forKey: .humidity)
         humidity = humidityValue.value / 100.0
 
         let windSpeedValue = try container.decode(
-            QuantitativeValue.self, forKey: .attribute(.windSpeed))
+            QuantitativeValue.self, forKey: .windSpeed)
         guard let speed = windSpeedValue.measurement(as: UnitSpeed.self) else {
             throw DecodingError.dataCorruptedError(
-                forKey: .attribute(.windSpeed),
+                forKey: .windSpeed,
                 in: container,
                 debugDescription: "Could not convert wind speed QuantitativeValue to Measurement"
             )
         }
         windSpeed = speed
 
-        condition = try container.decode(String.self, forKey: .attribute(.condition))
+        condition = try container.decode(String.self, forKey: .condition)
 
         if let precipChance = try container.decodeIfPresent(
             QuantitativeValue.self,
-            forKey: .attribute(.precipitationChance)
+            forKey: .precipitationChance
         ) {
             precipitationChance = precipChance.value / 100.0
         }
 
-        provider = try container.decodeIfPresent(String.self, forKey: .attribute(.provider))
-        attribution = try container.decodeIfPresent(String.self, forKey: .attribute(.attribution))
+        provider = try container.decodeIfPresent(String.self, forKey: .provider)
+        attribution = try container.decodeIfPresent(String.self, forKey: .attribution)
         attributionLink = try container.decodeIfPresent(
-            String.self, forKey: .attribute(.attributionLink))
+            String.self, forKey: .attributionLink)
     }
 }

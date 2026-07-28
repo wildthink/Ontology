@@ -47,9 +47,9 @@ public struct Handle: Hashable, Codable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(String.self, forKey: .kind)
         value = try container.decode(String.self, forKey: .value)
-        label = try container.decodeIfPresent(String.self, forKey: .label)
-        role = try container.decodeIfPresent(Role.self, forKey: .role) ?? .canonical
-        group = try container.decodeIfPresent(String.self, forKey: .group)
+        label = try container.value(.label)
+        role = try container.value(.role) ?? .canonical
+        group = try container.value(.group)
     }
 
     public func encode(to encoder: any Encoder) throws {

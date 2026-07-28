@@ -42,28 +42,29 @@ public struct Collection: Hashable, Sendable {
 
 extension Collection: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, members
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(identifier, forKey: .identifier)
+        try container.encodeIfPresent(meta, forKey: .meta)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
         if !members.isEmpty {
-            try container.encode(members, forKey: .attribute(.members))
+            try container.encode(members, forKey: .members)
         }
     }
 
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        members = try container.decodeIfPresent([HolonRef].self, forKey: .attribute(.members)) ?? []
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.value(.identifier)
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        members = try container.value(.members, or: [])
     }
 }
 

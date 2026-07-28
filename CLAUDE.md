@@ -98,9 +98,9 @@ Frontmatter keys are this ontology's field names. The `taxon` key replaces `@typ
 
 **Reading:** `MarkdownDocument(string:)` / `MarkdownDocument(contentsOf:)` splits the fence, then `FrontmatterParser.decode(_:from:)` runs YAML → JSON → `Decodable` via `universal`.
 
-**Writing:** `MarkdownDocument(_ entity:, body:)` encodes via `JSONEncoder`, normalises keys, serialises to YAML, then `MarkdownDocument.write(to:)` writes atomically.
+**Writing:** `MarkdownDocument(_ entity:, body:)` encodes via `JSONEncoder`, stamps `taxon`, drops nulls, serialises to YAML, then `MarkdownDocument.write(to:)` writes atomically.
 
-**YAML serialization rule:** `@type` is written when encoding but validated with `decodeIfPresent` when decoding — frontmatter never has `@type`. Types get this by calling `encodeJSONLDHeader` / `decodeJSONLDHeader` rather than hand-writing it; see [JSON-LD encoding pattern](#json-ld-encoding-pattern).
+**Taxon validation:** `FrontmatterParser` checks a present `taxon` against the target type and throws on a mismatch, so a `person.md` cannot silently decode as a `Place`. An absent `taxon` always passes. Frontmatter is the only format that carries a type tag — this check is what replaced per-type `@type` validation. See [type framing lives at the boundaries](#type-framing-lives-at-the-boundaries).
 
 ### HolonRef — two reference modes
 
@@ -136,7 +136,7 @@ Sources/
                       #   MarkdownWriter, YAMLSerializer
     Extensions/       # RecurrenceRuleRFC5545FormatStyle (vendored, MIT),
                       #   RFC5545DateList (EXDATE/RDATE lines)
-    JSON-LD.swift     # JSONLDCodingKey, header helpers, lenient decode helpers
+    JSON-LD.swift     # JSONLD framing (write boundary), decode + lenient helpers
     Schema.swift      # schema.org constant
 
   OntologyApple/      # Spoke — all #if canImport blocks live here
@@ -201,27 +201,32 @@ public struct Thing: Hashable, Sendable {
 
 Every parameter gets a default so callers name only what they set. Fields are `var` — bridges mutate in place.
 
-#### 2. Codable — use the header helpers, never hand-roll
+#### 2. Codable — let Swift synthesize it
+
+**The default is no hand-written `Codable` at all.** Declare `CodingKeys` and stop:
 
 ```swift
 extension Thing: Codable {
-    private enum CodingKeys: String, CodingKey { case name, /* … */ }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try c.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)   // omit `id:` for value types
-        try c.encodeIfPresent(name, forKey: .attribute(.name))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try c.decodeJSONLDHeader(Self.self)                        // `_ = try …` for value types
-        name = try c.decodeIfPresent(String.self, forKey: .attribute(.name))
+    private enum CodingKeys: String, CodingKey {
+        case identifier = "id"        // Entity only — `identifier` is spelled `id` on the wire
+        case meta
+        case name /* … */
     }
 }
 ```
 
-Use `decodeIfPresent` for every optional field. Reach for the lenient helpers (`decodeFlexibleStringList`, `decodeFlexibleIntList`, `decodeStringLeniently`) on any field that arrives from wild-web JSON-LD — scalars-where-arrays-belong and numbers-where-strings-belong are the norm, not the exception.
+Synthesized `encode(to:)` already uses `encodeIfPresent` for optionals (so nulls never reach YAML), and synthesized `init(from:)` already uses `decodeIfPresent`. Hand-write **only the half that needs it** — writing `init(from:)` yourself still leaves `encode(to:)` synthesized:
+
+| Reason to hand-write | Which half | Examples |
+|---|---|---|
+| A field defaults when absent (`?? []`, `?? .open`) | `init(from:)` | `Collection.members`, `Task.status`, `Plan.scoreCard` |
+| Wild-web leniency | `init(from:)` | `Person.email`, `PostalAddress.postalCode`, `Schedule.byMonth` |
+| A `URL` field (a junk string must not sink the record) | `init(from:)` | `Place.url`, `Document.url` |
+| An empty collection should be omitted, not written as `[]` | `encode(to:)` | `Collection.members`, `Outline.nodes` |
+
+Use the terse helpers in `JSON-LD.swift` when you do hand-write: `try c.value(.name)` for an optional, `try c.value(.members, or: [])` for a default, `try c.lenientURL(.url)` for a URL. For wild-web fields reach for `decodeFlexibleStringList`, `decodeFlexibleIntList`, `decodeStringLeniently` — scalars-where-arrays-belong and numbers-where-strings-belong are the norm, not the exception.
+
+**Never overload `decode(_:forKey:)`.** An overload pair meant to infer `decodeIfPresent` from an optional target type cannot work: when `T` binds to `Optional<…>` the non-optional overload wins and the call re-selects itself, so every decode recurses until the stack blows. That mistake shipped once already.
 
 #### 3. Entity only — register identity in two places
 
@@ -235,7 +240,7 @@ Use `decodeIfPresent` for every optional field. Reach for the lenient helpers (`
 
 #### 5. Test it
 
-At minimum: a JSON round trip, a **markdown frontmatter round trip** (this is the canonical format — `MarkdownDocument(thing)` → `.string()` → `decode`), an `@type`-mismatch rejection, and the wild-web shapes you expect. Assert `!text.contains("@type")` on frontmatter output.
+At minimum: a JSON round trip, a **markdown frontmatter round trip** (this is the canonical format — `MarkdownDocument(thing)` → `.string()` → `decode`), a taxon-mismatch rejection (Entity only), and the wild-web shapes you expect. Assert that encoded output contains no `@`-prefixed keys. `BoundaryCodingTests` holds the cross-cutting versions of these.
 
 #### 6. Update this file
 
@@ -261,36 +266,29 @@ Google Calendar stores positive minutes-before (e.g., `10` = 10 minutes before).
 
 `Taxon` is a string-backed value type (`ExpressibleByStringLiteral`, `CustomStringConvertible`). Entity IDs take the form `taxon.shortHash` (e.g. `person.3f8a91b2`) — stable across file renames. `EntityReference.shortID(taxon:)` generates them.
 
-### JSON-LD encoding pattern
+### Type framing lives at the boundaries
 
-All hub types use `JSONLDCodingKey<CodingKeys>` for their `Codable` conformance:
+**Hub types encode plain JSON.** Field names, `identifier` as `id`, and no `@`-prefixed keys anywhere. This is the internal format; JSON-LD is a format the hub *speaks at its edges*, not a format it stores in.
 
-- `.context` → `"@context"` (only at root: `encoder.codingPath.isEmpty`)
-- `.type` → `"@type"` (always; value is `String(describing: Self.self)`)
-- `.id` → `"@id"` (for `identifier`)
-- `.attribute(.name)` → `"name"` (for all other fields)
+Framing is applied and consumed at three boundaries, each with one owner:
 
-**Write the header with the helpers, not by hand.** `JSON-LD.swift` provides two container extensions that are the single enforcement point for the three framing keys:
+| Boundary | Direction | Owner | Type tag |
+|---|---|---|---|
+| schema.org JSON-LD | write | `JSONLD.object(_:)` / `JSONLD.data(_:)` | adds `@context`, `@type`, renames `id` → `@id` |
+| wild-web JSON-LD | read | `SchemaTypeRegistry` | routes on `@type`, renames `@id` → `id` |
+| markdown frontmatter | both | `MarkdownWriter` / `FrontmatterParser` | `taxon`, validated on read |
 
-```swift
-try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)  // @context/@type/@id
-identifier = try container.decodeJSONLDHeader(Self.self)                       // validates @type, returns @id
-```
+`JSONLD` types nested value objects from a small field-name table (`geo` → `GeoCoordinates`, `address` → `PostalAddress`, …), since a nested object has no Swift type available at the JSON level. `meta` is skipped — it is an opaque bag, not schema.org terms.
 
-Value types with no identity omit the `id:` argument and discard the result (`_ = try container.decodeJSONLDHeader(Self.self)`).
+**Why this replaced per-type `@type` headers:** every writer in the package immediately stripped the framing it had just encoded (`MarkdownWriter`, `OKFDocument`), and nothing consumed hub-produced `@type` — Luxo only ever *reads* JSON-LD. Twenty-two types were carrying framing for no reader. Type safety did not go away, it moved: `taxon` validation on the frontmatter path, registry routing on the JSON-LD path. Value types (`Schedule`, `ContactPoint`, `GeoCoordinates`, …) have no type tag at all — the field holding them says what they are, and a stray `@type` from a wild record is ignored rather than rejected.
 
-`decodeJSONLDHeader` performs the `decodeIfPresent` validation that keeps frontmatter YAML (which never has `@type`) decodable: an *absent* `@type` always passes, a *present and mismatched* one throws. Hand-rolling this is what let the rule drift — before the helpers existed, 10 of 22 types encoded `@type` and never validated it on decode.
-
-**Deliberate opt-outs** — three types do not use the helpers, and should not be "fixed" to match:
-
-| Type | Why |
-|---|---|
-| `DateTime` | Encodes as a bare ISO 8601 string when nested; only emits a JSON-LD header at root. |
-| `WeatherConditions`, `WeatherForecast` | `@type` is a WeatherKit URL, not the Swift type name, and decode is strict (`decode`, not `decodeIfPresent`). Safe because weather is transient sensor data that never round-trips through frontmatter. |
+Do not reintroduce `@type` into a hub type's `Codable`. If a caller needs framed output, that is what `JSONLD.object(_:)` is for.
 
 ### DateTime encoding
 
-`DateTime` wraps `Date` + optional `TimeZone`. Timezone resolution priority during encoding: (1) `encoder.userInfo[DateTime.timeZoneOverrideKey]`, (2) the `DateTime`'s own `timeZone`, (3) GMT/UTC.
+`DateTime` wraps `Date` + optional `TimeZone` and encodes as a **bare ISO 8601 string**, nested and at the root alike. Decoding also accepts the legacy keyed `{ value: … }` form so documents written before the framing moved out still read.
+
+Timezone resolution priority during encoding: (1) `encoder.userInfo[DateTime.timeZoneOverrideKey]`, (2) the `DateTime`'s own `timeZone`, (3) GMT/UTC.
 
 `DateTime(string:)` parses **leniently**: fractional seconds, whole seconds, or a bare date (`2026-06-30`) all accept — wild-web JSON-LD and hand-authored frontmatter rarely include fractional seconds.
 
@@ -299,7 +297,7 @@ Value types with no identity omit the `id:` argument and discard the result (`_ 
 `SchemaTypeRegistry.entity(fromJSONLD:sourceURL:)` decodes schema.org JSON-LD records into hub entities: `Person`→`Person`, `Organization` subtypes→`Organization`, `Place`/`LocalBusiness`→`Place`, `Event` subtypes→`Occurrence`, everything else (or any typed-decode failure) → `Document` preserving the raw record in `meta["jsonld"]`. Never throws.
 
 Leniency machinery for wild data (do not remove):
-- `@type` is stripped **recursively** before decode (nested schema.org type names never match hub Swift type names).
+- `@type` and `@context` are stripped and `@id` renamed to `id` **recursively** before decode (`strippingLDKeys`) — hub types read plain keys, and nested wild-web objects carry the same framing as the root.
 - schema.org Event `location` objects are remapped to `Occurrence.place` (`normalizedEventObject`).
 - `KeyedDecodingContainer.decodeFlexibleStringList(forKey:)` accepts `String` or `[String]` for repeatable properties (Person.email/telephone/url/sameAs/knowsLanguage use it). `decodeFlexibleIntList(forKey:)` is the numeric equivalent (Schedule.byMonth/byMonthDay/byMonthWeek), and also accepts digits written as strings.
 - Entities decoded from records without `@id` get a minted `shortID` so search UIs always have distinct stable ids.

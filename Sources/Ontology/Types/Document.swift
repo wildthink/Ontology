@@ -64,36 +64,23 @@ public struct Document: Hashable, Sendable {
 
 extension Document: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case name, description, url, contentType
         case dateCreated, dateModified, size, handles, meta
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
-        try container.encodeIfPresent(contentType, forKey: .attribute(.contentType))
-        try container.encodeIfPresent(dateCreated, forKey: .attribute(.dateCreated))
-        try container.encodeIfPresent(dateModified, forKey: .attribute(.dateModified))
-        try container.encodeIfPresent(size, forKey: .attribute(.size))
-        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-    }
-
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        url = try container.decodeIfPresent(String.self, forKey: .attribute(.url)).flatMap(URL.init(string:))
-        contentType = try container.decodeIfPresent(String.self, forKey: .attribute(.contentType))
-        dateCreated = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.dateCreated))
-        dateModified = try container.decodeIfPresent(DateTime.self, forKey: .attribute(.dateModified))
-        size = try container.decodeIfPresent(Int.self, forKey: .attribute(.size))
-        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
+        identifier = try container.value(.identifier)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        url = try container.lenientURL(.url)
+        contentType = try container.value(.contentType)
+        dateCreated = try container.value(.dateCreated)
+        dateModified = try container.value(.dateModified)
+        size = try container.value(.size)
+        handles = try container.value(.handles)
+        meta = try container.value(.meta)
     }
 }

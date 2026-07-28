@@ -117,16 +117,20 @@ public enum SchemaTypeRegistry {
         return raw.split(separator: "/").last.map(String.init)
     }
 
-    /// Remove JSON-LD framing keys that would trip hub decoders' `@type`
-    /// validation or add noise. `@type` is stripped **recursively** — nested
-    /// wild-web objects (`author`, `organizer`, `address`, …) carry schema.org
-    /// type names that never match hub Swift type names; the full record is
-    /// preserved separately in `meta`, so nothing is lost. `@id` is kept —
-    /// hub types decode it as `identifier`.
+    /// Translate JSON-LD framing into hub keys. Hub types encode plain field
+    /// names, so `@id` is renamed to `id` (their `identifier` key) and the two
+    /// framing keys that have no hub counterpart are dropped. All of it applies
+    /// **recursively**: nested wild-web objects (`author`, `organizer`,
+    /// `address`, …) carry the same framing, and the full record is preserved
+    /// separately in `meta`, so nothing is lost.
     static func strippingLDKeys(_ json: JSON) -> JSON {
         if var obj = json.object {
             obj.removeValue(forKey: "@type")
             obj.removeValue(forKey: "@context")
+            if let id = obj["@id"] {
+                obj.removeValue(forKey: "@id")
+                if obj["id"] == nil { obj["id"] = id }
+            }
             return .object(obj.mapValues { strippingLDKeys($0) })
         }
         if let arr = json.array {

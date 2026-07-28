@@ -140,8 +140,8 @@ struct PlaceTests {
         let data = try encoder.encode(place)
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
-        #expect(json["@context"] as? String == "https://schema.org")
-        #expect(json["@type"] as? String == "Place")
+        #expect(json["@context"] == nil)
+        #expect(json["@type"] == nil)
         #expect(json["name"] as? String == "Golden Gate Park")
         #expect(json["telephone"] as? String == "415-831-2700")
         #expect(json["url"] as? String == "https://goldengatepark.com")
@@ -149,16 +149,34 @@ struct PlaceTests {
         // Check geo coordinates
         let geo = json["geo"] as? [String: Any]
         #expect(geo != nil)
-        #expect(geo?["@type"] as? String == "GeoCoordinates")
         #expect(geo?["latitude"] as? Double == 37.7694)
         #expect(geo?["longitude"] as? Double == -122.4862)
 
         // Check address
         let address = json["address"] as? [String: Any]
         #expect(address != nil)
-        #expect(address?["@type"] as? String == "PostalAddress")
         #expect(address?["streetAddress"] as? String == "501 Stanyan St")
         #expect(address?["addressLocality"] as? String == "San Francisco")
+    }
+
+    @Test("JSONLD.object types the nested value objects")
+    func testJSONLDEnvelopeTypesNestedObjects() throws {
+        let place = Place(
+            identifier: "place.abc12345",
+            name: "Golden Gate Park",
+            address: PostalAddress(streetAddress: "501 Stanyan St"),
+            geo: GeoCoordinates(latitude: 37.7694, longitude: -122.4862)
+        )
+
+        let json = try JSONLD.object(place)
+
+        #expect(json["@context"]?.string == "https://schema.org")
+        #expect(json["@type"]?.string == "Place")
+        #expect(json["@id"]?.string == "place.abc12345")
+        // Nested objects are typed from the field name, and carry no @context.
+        #expect(json["geo"]?.object?["@type"]?.string == "GeoCoordinates")
+        #expect(json["geo"]?.object?["@context"] == nil)
+        #expect(json["address"]?.object?["@type"]?.string == "PostalAddress")
     }
 
     @Test("Place round-trip serialization preserves data")

@@ -36,34 +36,20 @@ public struct Place: Hashable, Sendable {
 
 extension Place: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, address, geo, telephone, url
     }
 
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encodeIfPresent(address, forKey: .attribute(.address))
-        try container.encodeIfPresent(geo, forKey: .attribute(.geo))
-        try container.encodeIfPresent(telephone, forKey: .attribute(.telephone))
-        try container.encodeIfPresent(url?.absoluteString, forKey: .attribute(.url))
-    }
-
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        identifier = try container.decodeJSONLDHeader(Self.self)
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        address = try container.decodeIfPresent(PostalAddress.self, forKey: .attribute(.address))
-        geo = try container.decodeIfPresent(GeoCoordinates.self, forKey: .attribute(.geo))
-        telephone = try container.decodeIfPresent(String.self, forKey: .attribute(.telephone))
-        let urlString = try container.decodeIfPresent(String.self, forKey: .attribute(.url))
-        url = urlString.flatMap { URL(string: $0) }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identifier = try container.value(.identifier)
+        meta = try container.value(.meta)
+        name = try container.value(.name)
+        description = try container.value(.description)
+        address = try container.value(.address)
+        geo = try container.value(.geo)
+        telephone = try container.value(.telephone)
+        url = try container.lenientURL(.url)
     }
 }

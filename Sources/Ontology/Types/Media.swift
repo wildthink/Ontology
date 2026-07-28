@@ -59,31 +59,8 @@ public struct Media: Hashable, Sendable {
 
 extension Media: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, description, contentUrl, encodingFormat, credit
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(description, forKey: .attribute(.description))
-        try container.encode(contentUrl, forKey: .attribute(.contentUrl))
-        try container.encodeIfPresent(encodingFormat, forKey: .attribute(.encodingFormat))
-        try container.encodeIfPresent(credit, forKey: .attribute(.credit))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        identifier = try container.decodeJSONLDHeader(Self.self)
-
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        description = try container.decodeIfPresent(String.self, forKey: .attribute(.description))
-        contentUrl = try container.decode(URL.self, forKey: .attribute(.contentUrl))
-        encodingFormat = try container.decodeIfPresent(String.self, forKey: .attribute(.encodingFormat))
-        credit = try container.decodeIfPresent(String.self, forKey: .attribute(.credit))
     }
 }

@@ -22,22 +22,6 @@ extension GeoCoordinates: Codable {
     private enum CodingKeys: String, CodingKey {
         case latitude, longitude, elevation
     }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, encoder: encoder)
-        try container.encode(latitude, forKey: .attribute(.latitude))
-        try container.encode(longitude, forKey: .attribute(.longitude))
-        try container.encodeIfPresent(elevation, forKey: .attribute(.elevation))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        _ = try container.decodeJSONLDHeader(Self.self)
-        latitude = try container.decode(Double.self, forKey: .attribute(.latitude))
-        longitude = try container.decode(Double.self, forKey: .attribute(.longitude))
-        elevation = try container.decodeIfPresent(Double.self, forKey: .attribute(.elevation))
-    }
 }
 
 // https://developer.apple.com/documentation/mapkit/unified-map-urls

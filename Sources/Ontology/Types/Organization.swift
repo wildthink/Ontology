@@ -60,35 +60,8 @@ public struct Organization: Hashable, Sendable {
 
 extension Organization: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, email, telephone, address, url, handles
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encodeIfPresent(email, forKey: .attribute(.email))
-        try container.encodeIfPresent(telephone, forKey: .attribute(.telephone))
-        try container.encodeIfPresent(address, forKey: .attribute(.address))
-        try container.encodeIfPresent(url, forKey: .attribute(.url))
-        try container.encodeIfPresent(handles, forKey: .attribute(.handles))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        identifier = try container.decodeJSONLDHeader(Self.self)
-
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        email = try container.decodeIfPresent([String].self, forKey: .attribute(.email))
-        telephone = try container.decodeIfPresent([String].self, forKey: .attribute(.telephone))
-        address = try container.decodeIfPresent([PostalAddress].self, forKey: .attribute(.address))
-        url = try container.decodeIfPresent([String].self, forKey: .attribute(.url))
-        handles = try container.decodeIfPresent([Handle].self, forKey: .attribute(.handles))
     }
 }

@@ -44,14 +44,11 @@ struct WeatherConditionsTests {
         let data = try encoder.encode(conditions)
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
-        #expect(json["@context"] as? String == "https://schema.org")
-        #expect(
-            json["@type"] as? String == "https://developer.apple.com/WeatherKit/#/WeatherConditions"
-        )
+        #expect(json["@context"] == nil)
+        #expect(json["@type"] == nil)
 
         // Check temperature encoding - access the wrapped QuantitativeValue properties
         if let temperature = json["temperature"] as? [String: Any] {
-            #expect(temperature["@type"] as? String == "QuantitativeValue")
             #expect(temperature["value"] as? Double == 20.0)
             #expect(temperature["unitCode"] as? String == "CEL")
         } else {

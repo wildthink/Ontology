@@ -53,10 +53,10 @@ extension Alarm: Codable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        method = try c.decodeIfPresent(String.self, forKey: .method)
-        if let n = try c.decodeIfPresent(Int.self, forKey: .offsetMinutes) {
+        method = try c.value(.method)
+        if let n: Int = try c.value(.offsetMinutes) {
             trigger = .offsetMinutes(n)
-        } else if let dt = try c.decodeIfPresent(DateTime.self, forKey: .absoluteDate) {
+        } else if let dt: DateTime = try c.value(.absoluteDate) {
             trigger = .absoluteDate(dt)
         } else {
             trigger = .offsetMinutes(-15)

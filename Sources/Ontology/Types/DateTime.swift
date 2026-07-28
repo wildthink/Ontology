@@ -63,34 +63,27 @@ extension DateTime: Codable {
     public static let timeZoneOverrideKey = CodingUserInfoKey(
         rawValue: "me.mattt.Ontology.DateTimeEncodingTimeZone")!
 
+    /// Decodes an ISO 8601 string. The keyed `{ value: … }` form is still
+    /// accepted so documents written before dates became bare strings keep
+    /// reading.
     public init(from decoder: Decoder) throws {
-        do {
-            // Try decoding as a JSON-LD object first
-            let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-            let string = try container.decode(String.self, forKey: .attribute(.value))
-            guard let date = DateTime(string: string) else {
-                throw DecodingError.dataCorrupted(
-                    DecodingError.Context(
-                        codingPath: container.codingPath,
-                        debugDescription: "Invalid date format"
-                    )
-                )
-            }
+        if let container = try? decoder.singleValueContainer(),
+           let string = try? container.decode(String.self),
+           let date = DateTime(string: string) {
             self = date
-        } catch {
-            // Fall back to decoding as a bare string
-            let container = try decoder.singleValueContainer()
-            let string = try container.decode(String.self)
-            guard let date = DateTime(string: string) else {
-                throw DecodingError.dataCorrupted(
-                    DecodingError.Context(
-                        codingPath: container.codingPath,
-                        debugDescription: "Invalid date format"
-                    )
-                )
-            }
-            self = date
+            return
         }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let string = try container.decode(String.self, forKey: .value)
+        guard let date = DateTime(string: string) else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: container.codingPath,
+                    debugDescription: "Invalid date format"
+                )
+            )
+        }
+        self = date
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -106,18 +99,8 @@ extension DateTime: Codable {
             formatter.timeZone = .gmt
         }
 
-        let string = formatter.string(from: value)
-
-        // Check if we're being encoded as part of a JSON-LD document
-        if encoder.codingPath.isEmpty {
-            var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-            try container.encode(schema.org, forKey: .context)
-            try container.encode(String(describing: Self.self), forKey: .type)
-            try container.encode(string, forKey: .attribute(.value))
-        } else {
-            // Encode as a bare string
-            var container = encoder.singleValueContainer()
-            try container.encode(string)
-        }
+        // Always a bare ISO 8601 string — at the root as well as nested.
+        var container = encoder.singleValueContainer()
+        try container.encode(formatter.string(from: value))
     }
 }

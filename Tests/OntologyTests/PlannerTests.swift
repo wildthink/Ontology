@@ -122,13 +122,19 @@ struct PlannerTests {
         #expect(task.status == .open)
     }
 
-    @Test("Task JSON-LD encoding has correct @type")
-    func testTaskJSONLDType() throws {
-        let task = Task(name: "Buy supplies")
+    @Test("Task encodes plain fields; JSONLD.object supplies the framing")
+    func testTaskEncoding() throws {
+        let task = Task(identifier: "task.001", name: "Buy supplies")
         let data = try JSONEncoder().encode(task)
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-        #expect(json["@type"] as? String == "Task")
-        #expect(json["@context"] as? String == "https://schema.org")
+        #expect(json["@type"] == nil)
+        #expect(json["@context"] == nil)
+        #expect(json["id"] as? String == "task.001")
+
+        let framed = try JSONLD.object(task)
+        #expect(framed["@type"]?.string == "Task")
+        #expect(framed["@context"]?.string == "https://schema.org")
+        #expect(framed["@id"]?.string == "task.001")
     }
 
     // MARK: - Commitment
@@ -180,12 +186,10 @@ struct PlannerTests {
         #expect(decoded.role == "self")
     }
 
-    @Test("Commitment JSON-LD encoding has correct @type")
+    @Test("JSONLD.object gives Commitment its @type")
     func testCommitmentJSONLDType() throws {
         let c = Commitment(name: "Attend session")
-        let data = try JSONEncoder().encode(c)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-        #expect(json["@type"] as? String == "Commitment")
+        #expect(try JSONLD.object(c)["@type"]?.string == "Commitment")
     }
 
     // MARK: - Taxon

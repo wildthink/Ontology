@@ -38,20 +38,22 @@ struct DateTimeTests {
         #expect(withMinutesDateTime?.timeZone?.secondsFromGMT() == 5 * 3600 + 30 * 60)
     }
 
-    @Test("DateTime encoding preserves timezone in JSON-LD")
-    func testJSONLDEncoding() throws {
+    @Test("DateTime encodes as a bare ISO 8601 string at the root")
+    func testRootEncoding() throws {
         let date = Date(timeIntervalSince1970: 0)
         let timeZone = TimeZone(secondsFromGMT: -28800)!  // -08:00 (Portland)
         let dateTime = DateTime(date, timeZone: timeZone)
 
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(dateTime)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let data = try JSONEncoder().encode(dateTime)
+        #expect(String(data: data, encoding: .utf8) == "\"1969-12-31T16:00:00.000-08:00\"")
+    }
 
-        #expect(json["@context"] as? String == "https://schema.org")
-        #expect(json["@type"] as? String == "DateTime")
-        let value = json["value"] as! String
-        #expect(value == "1969-12-31T16:00:00.000-08:00")
+    @Test("DateTime still reads the legacy keyed form")
+    func testLegacyKeyedDecoding() throws {
+        let legacy = #"{"@type":"DateTime","value":"1969-12-31T16:00:00.000-08:00"}"#
+        let decoded = try JSONDecoder().decode(DateTime.self, from: Data(legacy.utf8))
+
+        #expect(decoded.value == Date(timeIntervalSince1970: 0))
     }
 
     @Test("DateTime string encoding preserves timezone")
@@ -121,14 +123,12 @@ struct DateTimeTests {
         // Verify it used the TimeZone from userInfo, not the one from dateTime
         #expect(jsonString.contains("1969-12-31T19:00:00.000-05:00"))
 
-        // Test with a JSON-LD encoding
-        let jsonLDDateTime = DateTime(date)
-        let jsonLDData = try encoder.encode(jsonLDDateTime)
-        let json = try JSONSerialization.jsonObject(with: jsonLDData) as! [String: Any]
-
-        // Verify the TimeZone from userInfo was used
-        let value = json["value"] as! String
-        #expect(value.contains("1969-12-31T19:00:00.000-05:00"))
+        // A DateTime with no timezone of its own also picks up the override
+        let bareDateTime = DateTime(date)
+        let bareData = try encoder.encode(bareDateTime)
+        let bareString = String(data: bareData, encoding: .utf8)!
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+        #expect(bareString.contains("1969-12-31T19:00:00.000-05:00"))
 
         // Verify userInfo TimeZone takes precedence over DateTime's TimeZone
         let tokyoDateTime = DateTime(date, timeZone: TimeZone(secondsFromGMT: 9 * 3600))

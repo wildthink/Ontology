@@ -59,33 +59,8 @@ public struct Relationship: Hashable, Sendable {
 
 extension Relationship: Codable {
     private enum CodingKeys: String, CodingKey {
+        case identifier = "id"
         case meta
         case name, from, to, kind, reciprocal, note
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        try container.encodeJSONLDHeader(Self.self, id: identifier, encoder: encoder)
-        try container.encodeIfPresent(meta, forKey: .attribute(.meta))
-        try container.encodeIfPresent(name, forKey: .attribute(.name))
-        try container.encode(from, forKey: .attribute(.from))
-        try container.encode(to, forKey: .attribute(.to))
-        try container.encode(kind, forKey: .attribute(.kind))
-        try container.encodeIfPresent(reciprocal, forKey: .attribute(.reciprocal))
-        try container.encodeIfPresent(note, forKey: .attribute(.note))
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-
-        identifier = try container.decodeJSONLDHeader(Self.self)
-
-        meta = try container.decodeIfPresent(Meta.self, forKey: .attribute(.meta))
-        name = try container.decodeIfPresent(String.self, forKey: .attribute(.name))
-        from = try container.decode(HolonRef.self, forKey: .attribute(.from))
-        to = try container.decode(HolonRef.self, forKey: .attribute(.to))
-        kind = try container.decode(String.self, forKey: .attribute(.kind))
-        reciprocal = try container.decodeIfPresent(Bool.self, forKey: .attribute(.reciprocal))
-        note = try container.decodeIfPresent(String.self, forKey: .attribute(.note))
     }
 }

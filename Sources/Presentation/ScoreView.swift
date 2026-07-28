@@ -156,8 +156,9 @@ public struct ScoreView: View {
 
     private func adjust(_ delta: Double) {
         let boundedDelta = max(-score.value.value, delta)
-        _ = withAnimation(.snappy) {
-            score.record(boundedDelta)
+        guard boundedDelta != 0 else { return }
+        withAnimation(.snappy) {
+            score.advance(by: boundedDelta)
         }
     }
 

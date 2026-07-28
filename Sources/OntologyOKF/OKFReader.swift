@@ -46,11 +46,7 @@ public enum OKFReader {
         // type — OKF concept kind; hub decoders don't use it (validation is optional)
         obj.removeValue(forKey: "type")
 
-        // id → @id
-        if let id = obj["id"] {
-            obj["@id"] = id
-            obj.removeValue(forKey: "id")
-        }
+        // `id` is the hub's own key — it passes through untouched.
 
         // title is the OKF at-rest canonical field — it wins over a stale `name`
         // extension key (e.g. if a file was hand-edited after being written).
