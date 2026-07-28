@@ -120,7 +120,14 @@ extension GCalEvent {
 
     /// Create a GCalEvent body from a `Plan` (for insert / update of a recurring master).
     public init(_ plan: Plan) {
-        let rrule = plan.rrule.map { "RRULE:\($0)" }
+        // Google's `recurrence` is an array of RFC 5545 lines; RRULE and EXDATE
+        // are separate entries, so a plan's cancelled instances ride alongside
+        // the rule rather than inside it.
+        var recurrence: [String] = []
+        if let rrule = plan.rrule { recurrence.append("RRULE:\(rrule)") }
+        if let exdate = RFC5545DateList.format(plan.exceptDates) {
+            recurrence.append("EXDATE:\(exdate)")
+        }
         let calID = plan.handles?.value(for: Handle.Kind.googleCalendar) ?? plan.identifier
         self.init(
             id: calID,
@@ -129,7 +136,7 @@ extension GCalEvent {
             htmlLink: plan.url?.absoluteString,
             start: plan.startDate.map { EventDateTime($0) },
             end: plan.endDate.map { EventDateTime($0) },
-            recurrence: rrule.map { [$0] },
+            recurrence: recurrence.isEmpty ? nil : recurrence,
             reminders: plan.alarms.map { Reminders(alarms: $0) }
         )
     }
@@ -177,6 +184,9 @@ extension Plan {
         let rrule = gcal.recurrence?
             .first(where: { $0.hasPrefix("RRULE:") })
             .map { String($0.dropFirst(6)) }
+        let exceptDates = RFC5545DateList.parse(
+            gcal.recurrence?.filter { $0.hasPrefix("EXDATE") } ?? []
+        )
         let handles: [Handle]? = gcal.id.map { [Handle(kind: Handle.Kind.googleCalendar, value: $0)] }
         self.init(
             identifier: gcal.id,
@@ -186,6 +196,7 @@ extension Plan {
             endDate: gcal.end.flatMap { DateTime(googleDateTime: $0) },
             url: gcal.htmlLink.flatMap { URL(string: $0) },
             rrule: rrule,
+            exceptDates: exceptDates,
             alarms: gcal.reminders?.overrides?.map { Alarm(googleReminder: $0) },
             handles: handles
         )

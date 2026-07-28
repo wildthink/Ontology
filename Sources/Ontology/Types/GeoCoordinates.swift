@@ -25,10 +25,7 @@ extension GeoCoordinates: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-        try container.encode(String(describing: Self.self), forKey: .type)
+        try container.encodeJSONLDHeader(Self.self, encoder: encoder)
         try container.encode(latitude, forKey: .attribute(.latitude))
         try container.encode(longitude, forKey: .attribute(.longitude))
         try container.encodeIfPresent(elevation, forKey: .attribute(.elevation))
@@ -36,6 +33,7 @@ extension GeoCoordinates: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
+        _ = try container.decodeJSONLDHeader(Self.self)
         latitude = try container.decode(Double.self, forKey: .attribute(.latitude))
         longitude = try container.decode(Double.self, forKey: .attribute(.longitude))
         elevation = try container.decodeIfPresent(Double.self, forKey: .attribute(.elevation))

@@ -40,11 +40,7 @@ extension QuantitativeValue: Codable {
         var container = encoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
         // Encode @context if we're at the root level
-        if encoder.codingPath.isEmpty {
-            try container.encode(schema.org, forKey: .context)
-        }
-        try container.encode(String(describing: Self.self), forKey: .type)
-
+        try container.encodeJSONLDHeader(Self.self, encoder: encoder)
         try container.encode(value, forKey: .attribute(.value))
         try container.encode(unitCode, forKey: .attribute(.unitCode))
         try container.encodeIfPresent(unitText, forKey: .attribute(.unitText))
@@ -53,17 +49,7 @@ extension QuantitativeValue: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: JSONLDCodingKey<CodingKeys>.self)
 
-        // Validate @type when present (JSON-LD); absent in YAML frontmatter — both are valid.
-        let describedType = String(describing: Self.self)
-        if let decodedType = try container.decodeIfPresent(String.self, forKey: .type),
-           decodedType != describedType {
-            throw DecodingError.dataCorruptedError(
-                forKey: .type,
-                in: container,
-                debugDescription: "Expected type to be '\(describedType)', but found \(decodedType)"
-            )
-        }
-
+        _ = try container.decodeJSONLDHeader(Self.self)
         // Decode properties
         value = try container.decode(Double.self, forKey: .attribute(.value))
         unitCode = try container.decode(String.self, forKey: .attribute(.unitCode))

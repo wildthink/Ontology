@@ -24,8 +24,16 @@ public enum SchemaTypeRegistry {
         let person: @Sendable (JSON) throws -> any Entity = { try Person(json: $0) }
         let org: @Sendable (JSON) throws -> any Entity = { try Organization(json: $0) }
         let place: @Sendable (JSON) throws -> any Entity = { try Place(json: $0) }
-        let occurrence: @Sendable (JSON) throws -> any Entity = {
-            try Occurrence(json: normalizedEventObject($0))
+        // A schema.org Event carrying `eventSchedule` describes a *recurring*
+        // event — intent that generates instances — which is the hub's `Plan`,
+        // not `Occurrence`. `Occurrence` is an atomic space-time fact and never
+        // carries a recurrence rule, so routing these to `Occurrence` would drop
+        // the recurrence entirely.
+        let occurrence: @Sendable (JSON) throws -> any Entity = { json in
+            if json.object?["eventSchedule"] != nil {
+                return try Plan(json: normalizedScheduledEvent(json))
+            }
+            return try Occurrence(json: normalizedEventObject(json))
         }
 
         map["Person"] = person
@@ -149,6 +157,43 @@ public enum SchemaTypeRegistry {
         return .object(obj)
     }
 
+    /// schema.org Event + `eventSchedule` → hub Plan field remapping, applied
+    /// before decode.
+    ///
+    /// `eventSchedule` holds a schema.org `Schedule`, which the hub stores as an
+    /// RFC 5545 `rrule` string. The schedule's own `startDate` seeds the plan's
+    /// when the event does not carry one, and `exceptDate` becomes `exceptDates`.
+    /// Unlike `Occurrence`, `Plan.location` is already a `Place`, so a location
+    /// object needs no remapping.
+    static func normalizedScheduledEvent(_ json: JSON) -> JSON {
+        guard var obj = json.object, let raw = obj["eventSchedule"] else { return json }
+
+        // `eventSchedule` is repeatable; take the first entry that yields a rule.
+        // Multiple schedules can't be expressed in a single RRULE, so the rest are
+        // preserved in meta rather than silently dropped.
+        let schedules = raw.array ?? [raw]
+        for entry in schedules {
+            guard let schedule = try? Schedule(json: entry), let rrule = schedule.rrule()
+            else { continue }
+            obj["rrule"] = .string(rrule)
+            if obj["startDate"] == nil, let start = entry.object?["startDate"] {
+                obj["startDate"] = start
+            }
+            if let except = entry.object?["exceptDate"] {
+                obj["exceptDates"] = except.array != nil ? except : .array([except])
+            }
+            break
+        }
+
+        if schedules.count > 1 || obj["rrule"] == nil {
+            var meta = obj["meta"]?.object ?? [:]
+            meta["eventSchedule"] = raw
+            obj["meta"] = .object(meta)
+        }
+        obj.removeValue(forKey: "eventSchedule")
+        return .object(obj)
+    }
+
     /// Record provenance (handles / meta) and guarantee a stable identifier —
     /// wild JSON-LD rarely carries `@id`, and search UIs need distinct IDs.
     private static func stamped(_ entity: any Entity, sourceURL: URL?) -> any Entity {
@@ -164,6 +209,10 @@ public enum SchemaTypeRegistry {
             if let handle { o.handles = (o.handles ?? []) + [handle] }
             if o.identifier == nil { o.identifier = Occurrence.shortID(taxon: .occurrence) }
             return o
+        case var p as Plan:
+            if let handle { p.handles = (p.handles ?? []) + [handle] }
+            if p.identifier == nil { p.identifier = Plan.shortID(taxon: .plan) }
+            return p
         case var org as Organization:
             if org.identifier == nil { org.identifier = Organization.shortID(taxon: .org) }
             return sourced(org, sourceURL: sourceURL)
