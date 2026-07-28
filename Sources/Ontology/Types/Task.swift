@@ -23,6 +23,14 @@ public struct Task: Hashable, Sendable {
     public var plan: HolonRef?
     /// The person or org responsible for this task.
     public var assignee: HolonRef?
+    /// Who actually did it — distinct from `assignee`, who was asked.
+    /// Paired with `statusChangedAt` for when. No progress history is kept.
+    public var completedBy: HolonRef?
+    /// The meeting or work block that *is* this action, when one exists.
+    /// Optional: an action item needs no calendar event.
+    public var occurrence: HolonRef?
+    /// Estimated time-to-complete (e.g. 30 minutes, 2 hours).
+    public var effort: QuantitativeValue?
     public var dueDate: DateTime?
     /// Relative scheduling intent used when no exact due date is known.
     public var schedulingIntent: SchedulingIntent?
@@ -46,6 +54,9 @@ public struct Task: Hashable, Sendable {
         description: String? = nil,
         plan: HolonRef? = nil,
         assignee: HolonRef? = nil,
+        completedBy: HolonRef? = nil,
+        occurrence: HolonRef? = nil,
+        effort: QuantitativeValue? = nil,
         dueDate: DateTime? = nil,
         schedulingIntent: SchedulingIntent? = nil,
         status: Status = .open,
@@ -59,6 +70,9 @@ public struct Task: Hashable, Sendable {
         self.description = description
         self.plan = plan
         self.assignee = assignee
+        self.completedBy = completedBy
+        self.occurrence = occurrence
+        self.effort = effort
         self.dueDate = dueDate
         self.schedulingIntent = schedulingIntent
         self.status = status
@@ -73,7 +87,8 @@ extension Task: Codable {
     private enum CodingKeys: String, CodingKey {
         case identifier = "id"
         case meta
-        case name, description, plan, assignee, dueDate, schedulingIntent, status, statusChangedAt
+        case name, description, plan, assignee, completedBy, occurrence, effort
+        case dueDate, schedulingIntent, status, statusChangedAt
         case priority, alarms, handles
     }
 
@@ -85,6 +100,9 @@ extension Task: Codable {
         description = try container.value(.description)
         plan = try container.value(.plan)
         assignee = try container.value(.assignee)
+        completedBy = try container.value(.completedBy)
+        occurrence = try container.value(.occurrence)
+        effort = try container.value(.effort)
         dueDate = try container.value(.dueDate)
         let rawSchedulingIntent: String? = try container.value(.schedulingIntent)
         schedulingIntent = rawSchedulingIntent.flatMap(SchedulingIntent.init(rawValue:))

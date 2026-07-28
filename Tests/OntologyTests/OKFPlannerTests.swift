@@ -37,6 +37,49 @@ struct OKFPlannerTests {
         #expect(decoded.priority == 1)
     }
 
+    @Test("Task execution fields survive the OKF markdown round trip")
+    func testTaskExecutionFieldsOKFRoundTrip() throws {
+        let doerRef = HolonRef.entity(.person, "person.def456")
+        let meetingRef = HolonRef.entity(.occurrence, "occurrence.xyz789")
+
+        let task = Task(
+            identifier: "task.002",
+            name: "Attend the session-zero meeting",
+            completedBy: doerRef,
+            occurrence: meetingRef,
+            effort: QuantitativeValue(value: 90, unitCode: "MIN", unitText: "minutes"),
+            status: .done
+        )
+
+        let text = try OKFDocument(task, body: "Ran long, but everyone showed.").string()
+        let decoded = try OKFReader.decode(Task.self, from: text)
+
+        #expect(decoded.completedBy == doerRef)
+        #expect(decoded.occurrence == meetingRef)
+        #expect(decoded.effort?.value == 90)
+        #expect(decoded.status == .done)
+    }
+
+    @Test("Record writes and reads back via OKF markdown")
+    func testRecordOKFRoundTrip() throws {
+        let planRef = HolonRef.entity(.plan, "plan.001")
+        let record = Record(
+            identifier: "record.001",
+            name: "Session 12 ran",
+            subject: planRef,
+            outcome: "Party cleared the goblin lair.",
+            recordedAt: DateTime(Date(timeIntervalSinceReferenceDate: 86400), timeZone: .gmt)
+        )
+
+        let text = try OKFDocument(record, body: "## Notes\n\nMira's character died.").string()
+        #expect(text.contains("Session 12 ran"))
+
+        let decoded = try OKFReader.decode(Record.self, from: text)
+        #expect(decoded.subject == planRef)
+        #expect(decoded.outcome == "Party cleared the goblin lair.")
+        #expect(decoded.recordedAt != nil)
+    }
+
     @Test("Task writes and reads back via OKFBundle")
     func testTaskOKFBundleRoundTrip() throws {
         let tmp = FileManager.default.temporaryDirectory

@@ -44,7 +44,7 @@ The `Entity` protocol requires two things beyond `Holon + Codable`:
 |---|---|---|
 | `Plan` | Intent or template; may carry an RRule and generate Occurrences via `occurrences(limit:)` | Yes |
 | `Occurrence` | Atomic space-time fact: a single specific time + place + description | Yes |
-| `Task` | Actionable work unit owned by a Plan | Yes |
+| `Task` | Actionable work unit owned by a Plan — the "action item" of the planner checklist. Carries `assignee` (who was asked) vs `completedBy` (who did it), optional `effort`, and an optional `occurrence` for the meeting or block that *is* the action | Yes |
 | `Commitment` | Relational promise or obligation between actors within a Plan | Yes |
 | `Record` | Documented outcome: a Plan or Occurrence + what actually happened | Yes |
 | `Person` | A person with identity, narrative, relationships | Yes |
@@ -73,6 +73,10 @@ The `Entity` protocol requires two things beyond `Holon + Codable`:
 **ScheduleItem pattern**: `Occurrence` with `plan: HolonRef` set. No separate type.
 
 **Alarms are informational** — they may be set on Plans, Occurrences, and Tasks to trigger notifications, but plan progress and completion must never depend on them.
+
+**Scores overwrite, Records accumulate.** `Score` (in `Plan.scoreCard`) is a live gauge mutated in place — a current value, a goal, a last-updated stamp, and no entry history. `Record` is the durable memory of what actually happened. Do not add progress history to `Score`, a `log` array to `Plan`, or a progress value to `Task`: an action item is atomic, holding only its current `status`. The `Score.Entry` machinery that once did this was deleted deliberately. See [PLANNER.md](PLANNER.md).
+
+**Plan completion is gated by the checklist alone** — `Plan.isCompletable(given:)` is true when no `Task` is `.open` or `.inProgress`. Scores and alarms are advisory and never gate it. `Plan` does not store its tasks (they back-reference via `Task.plan`), which is why the check takes them as an argument.
 
 The deprecated `Event`, `PlanAction`, `ItemList`, and `Trip` types have been **removed**. Use `Plan`/`Occurrence`/`Collection`.
 

@@ -12,11 +12,53 @@ import Testing
     #expect(score.finalValue == nil)
 }
 
+/// `init` used to accept `value:` and `updated:` and assign neither — the starting
+/// value was reconstructed from the (now removed) `entries` array instead. With the
+/// score mutated in place there is nothing to reconstruct from, so both must stick.
+@Test func scoreInitHonoursItsStartingValueAndStamp() {
+    let stamped = Date(timeIntervalSince1970: 1_700_000_000)
+    let score = Score(summary: "Miles", value: 3, goal: 10, updated: stamped)
+
+    #expect(score.value.value == 3)
+    #expect(score.goal.value == 10)
+    #expect(score.updated == stamped)
+}
+
+/// A score is a live gauge: advancing overwrites the value and moves the stamp
+/// forward, keeping no record of where it had been.
+@Test func advancingAScoreOverwritesRatherThanAccumulatingHistory() {
+    let first = Date(timeIntervalSince1970: 1_700_000_000)
+    let second = first.addingTimeInterval(3600)
+    var score = Score(summary: "Pages", goal: 10)
+
+    score.advance(by: 4, at: first)
+    #expect(score.value.value == 4)
+    #expect(score.state == .in_progress)
+    #expect(score.updated == first)
+
+    score.advance(by: 3, at: second)
+    #expect(score.value.value == 7)
+    #expect(score.updated == second)
+    #expect(!score.isFinal)
+
+    score.advance(by: 3, at: second)
+    #expect(score.isFinal)
+}
+
+@Test func finalizingAScoreStampsWhenItHappened() {
+    let closed = Date(timeIntervalSince1970: 1_700_000_000)
+    var score = Score(summary: "Launch", goal: 1)
+
+    score.setFinalValue(1, at: closed)
+
+    #expect(score.updated == closed)
+    #expect(score.isFinal)
+}
+
 @Test func scoreSurvivesCodableRoundTrip() throws {
     let recorded = Date(timeIntervalSince1970: 1_700_000_000)
     var score = Score(summary: "Drafts", goal: 3)
     score.setFinalValue(2, at: recorded)
-    score.updated = recorded
 
     let data = try JSONEncoder().encode(score)
     let decoded = try JSONDecoder().decode(Score.self, from: data)

@@ -13,7 +13,7 @@ struct PlannerTests {
         let partnerRef = HolonRef.entity(.person, "person.def456")
         let seedRef = HolonRef.entity(.occurrence, "occurrence.xyz789")
 
-        var plan = Plan(
+        let plan = Plan(
             identifier: "plan.001",
             name: "Prepare dungeon map",
             description: "Draw the goblin lair for session 12",
@@ -120,6 +120,102 @@ struct PlannerTests {
         """
         let task = try JSONDecoder().decode(Task.self, from: Data(json.utf8))
         #expect(task.status == .open)
+    }
+
+    @Test("Task carries effort, completedBy, and the occurrence that is the action")
+    func testTaskExecutionFields() throws {
+        let assigneeRef = HolonRef.entity(.person, "person.abc123")
+        let doerRef = HolonRef.entity(.person, "person.def456")
+        let meetingRef = HolonRef.entity(.occurrence, "occurrence.xyz789")
+
+        let task = Task(
+            identifier: "task.002",
+            name: "Attend the session-zero meeting",
+            assignee: assigneeRef,
+            completedBy: doerRef,
+            occurrence: meetingRef,
+            effort: QuantitativeValue(value: 90, unitCode: "MIN", unitText: "minutes"),
+            status: .done,
+            statusChangedAt: DateTime(Date(timeIntervalSinceReferenceDate: 43200))
+        )
+
+        let decoded = try JSONDecoder().decode(Task.self, from: JSONEncoder().encode(task))
+
+        // Who was asked and who actually did it are separate facts.
+        #expect(decoded.assignee == assigneeRef)
+        #expect(decoded.completedBy == doerRef)
+        #expect(decoded.occurrence == meetingRef)
+        #expect(decoded.effort?.value == 90)
+        #expect(decoded.effort?.unitText == "minutes")
+        #expect(decoded.statusChangedAt != nil)
+    }
+
+    @Test("The optional supports stay absent when a task doesn't use them")
+    func testTaskNeedsNoSupports() throws {
+        let task = Task(name: "Buy dice", status: .open)
+        let text = String(data: try JSONEncoder().encode(task), encoding: .utf8)!
+
+        #expect(!text.contains("occurrence"))
+        #expect(!text.contains("alarms"))
+        #expect(!text.contains("effort"))
+    }
+
+    // MARK: - Plan completion
+
+    @Test("A plan is completable once no action item is open or in progress")
+    func testPlanCompletability() {
+        let plan = Plan(identifier: "plan.001", name: "Run the one-shot")
+
+        // An empty checklist is completable.
+        #expect(plan.isCompletable(given: []))
+
+        let open = Task(name: "Open", status: .open)
+        let inProgress = Task(name: "Working", status: .inProgress)
+        let done = Task(name: "Done", status: .done)
+        let skipped = Task(name: "Skipped", status: .skipped)
+        let cancelled = Task(name: "Cancelled", status: .cancelled)
+
+        #expect(!plan.isCompletable(given: [done, open]))
+        #expect(!plan.isCompletable(given: [done, inProgress]))
+
+        // Skipping or cancelling a straggler unblocks the plan.
+        #expect(plan.isCompletable(given: [done, skipped, cancelled]))
+    }
+
+    @Test("Scores and alarms are advisory — neither blocks plan completion")
+    func testScoresAndAlarmsDoNotGateCompletion() {
+        var unfinished = Score(summary: "Sessions run", goal: 12)
+        unfinished.advance(by: 3)
+
+        let plan = Plan(
+            identifier: "plan.002",
+            name: "Campaign",
+            alarms: [.minutesBefore(60)],
+            scoreCard: [unfinished]
+        )
+
+        #expect(!plan.scoreCard.isFinal)
+        #expect(plan.isCompletable(given: [Task(name: "Done", status: .done)]))
+    }
+
+    // MARK: - Recording what happened
+
+    @Test("Completing a plan produces a Record that outlives it")
+    func testPlanCompletionRecord() throws {
+        let planRef = HolonRef.entity(.plan, "plan.001")
+        let record = Record(
+            identifier: "record.001",
+            name: "Session 12 ran",
+            subject: planRef,
+            outcome: "Party cleared the goblin lair; Mira's character died in the second room.",
+            recordedAt: DateTime(Date(timeIntervalSinceReferenceDate: 86400))
+        )
+
+        let decoded = try JSONDecoder().decode(Record.self, from: JSONEncoder().encode(record))
+
+        #expect(decoded.subject == planRef)
+        #expect(decoded.outcome?.contains("goblin lair") == true)
+        #expect(decoded.recordedAt != nil)
     }
 
     @Test("Task encodes plain fields; JSONLD.object supplies the framing")

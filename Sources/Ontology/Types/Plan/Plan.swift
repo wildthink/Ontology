@@ -173,6 +173,26 @@ extension Plan {
     }
 }
 
+// MARK: - Completion
+
+extension Plan {
+    /// Whether this plan may be marked `completed`, given its action items.
+    ///
+    /// A plan is completable when no action item is still `open` or `inProgress` —
+    /// clear stragglers by marking them done, skipped, or cancelled. A plan with no
+    /// action items is completable.
+    ///
+    /// Deliberately ignores `scoreCard` and `alarms`. Scores are advisory gauges and
+    /// alarms are informational; neither gates completion. Do not "fix" this by
+    /// requiring `scoreCard.isFinal`.
+    ///
+    /// `Plan` does not store its tasks — they back-reference it via `Task.plan` — so
+    /// the caller supplies them.
+    public func isCompletable(given tasks: [Task]) -> Bool {
+        !tasks.contains { $0.status == .open || $0.status == .inProgress }
+    }
+}
+
 // MARK: - Grouping convenience
 
 extension Plan {
