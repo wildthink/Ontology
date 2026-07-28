@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Ontology",
+    name: "OKOntology",
     platforms: [.macOS(.v26), .iOS(.v18), .tvOS(.v18), .watchOS(.v11)],
     products: [
         .library(

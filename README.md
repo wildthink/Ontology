@@ -1,6 +1,11 @@
-# Ontology
+# OKOntology
 
 A Swift library for structured, narrative-friendly data exchange. Provides JSON-LD serializable entity types, a markdown-based persistence format, and bidirectional bridges to Apple frameworks (EventKit, Contacts, CoreLocation) and Google Workspace APIs (Calendar, People, Tasks, Drive).
+
+> Began as a fork of [mattt/Ontology](https://github.com/mattt/Ontology) and has since
+> diverged substantially in scope and intent. The original MIT license and copyright are
+> retained in [LICENSE.md](LICENSE.md). The module names remain `Ontology`,
+> `OntologyApple`, and so on; only the package and repository are named `OKOntology`.
 
 ## Requirements
 
@@ -12,7 +17,7 @@ A Swift library for structured, narrative-friendly data exchange. Provides JSON-
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/wildthink/Ontology.git", branch: "main")
+    .package(url: "https://github.com/wildthink/OKOntology.git", branch: "main")
 ]
 ```
 
