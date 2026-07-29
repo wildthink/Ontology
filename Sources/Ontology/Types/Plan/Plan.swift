@@ -42,7 +42,6 @@ public struct Plan: Hashable, Sendable {
 
     /// Open, schema-free metadata (see `Meta`).
 
-    public var scoreCard: ScoreCard
     public var meta: Meta?
 
 
@@ -64,8 +63,7 @@ public struct Plan: Hashable, Sendable {
         subject: HolonRef? = nil,
         effort: QuantitativeValue? = nil,
         alarms: [Alarm]? = nil,
-        handles: [Handle]? = nil,
-        scoreCard: ScoreCard = []
+        handles: [Handle]? = nil
     ) {
         self.identifier = identifier
         self.name = name
@@ -85,7 +83,6 @@ public struct Plan: Hashable, Sendable {
         self.effort = effort
         self.alarms = alarms
         self.handles = handles
-        self.scoreCard = scoreCard
     }
 }
 
@@ -96,7 +93,6 @@ extension Plan: Codable {
         case identifier = "id"
         case meta
         case name, description, status, startDate, endDate, dueDate
-        case scoreCard
         case location, url, rrule, exceptDates, tags
         case owner, participants, subject
         case effort, alarms, handles
@@ -123,9 +119,6 @@ extension Plan: Codable {
         try c.encodeIfPresent(effort, forKey: .effort)
         try c.encodeIfPresent(alarms, forKey: .alarms)
         try c.encodeIfPresent(handles, forKey: .handles)
-        if !scoreCard.isEmpty {
-            try c.encode(scoreCard, forKey: .scoreCard)
-        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -149,7 +142,6 @@ extension Plan: Codable {
         effort = try c.value(.effort)
         alarms = try c.value(.alarms)
         handles = try c.value(.handles)
-        scoreCard = try c.value(.scoreCard, or: [])
     }
 }
 
@@ -182,9 +174,10 @@ extension Plan {
     /// clear stragglers by marking them done, skipped, or cancelled. A plan with no
     /// action items is completable.
     ///
-    /// Deliberately ignores `scoreCard` and `alarms`. Scores are advisory gauges and
-    /// alarms are informational; neither gates completion. Do not "fix" this by
-    /// requiring `scoreCard.isFinal`.
+    /// Deliberately ignores `Task.progress` and `alarms`. Progress is an advisory
+    /// note of what's up and alarms are informational; neither gates completion.
+    /// Do not "fix" this by requiring every countable item to have reached its goal —
+    /// "I did it" is the check-off, not the count.
     ///
     /// `Plan` does not store its tasks — they back-reference it via `Task.plan` — so
     /// the caller supplies them.

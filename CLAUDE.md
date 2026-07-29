@@ -74,9 +74,11 @@ The `Entity` protocol requires two things beyond `Holon + Codable`:
 
 **Alarms are informational** — they may be set on Plans, Occurrences, and Tasks to trigger notifications, but plan progress and completion must never depend on them.
 
-**Scores overwrite, Records accumulate.** `Score` (in `Plan.scoreCard`) is a live gauge mutated in place — a current value, a goal, a last-updated stamp, and no entry history. `Record` is the durable memory of what actually happened. Do not add progress history to `Score`, a `log` array to `Plan`, or a progress value to `Task`: an action item is atomic, holding only its current `status`. The `Score.Entry` machinery that once did this was deleted deliberately. See [PLANNER.md](PLANNER.md).
+**Progress overwrites, Records accumulate.** A `Task` may carry an optional count — `goal`, `progress`, `unitLabel`, and a single `progressUpdatedAt` stamp. `advance(by:)` overwrites; there is no entry history and there will not be one. `Record` is the durable memory of what actually happened. Do not add a progress log to `Task` or a `log` array to `Plan`: the `Score.Entry` machinery that once did this was deleted deliberately. See [PLANNER.md](PLANNER.md).
 
-**Plan completion is gated by the checklist alone** — `Plan.isCompletable(given:)` is true when no `Task` is `.open` or `.inProgress`. Scores and alarms are advisory and never gate it. `Plan` does not store its tasks (they back-reference via `Task.plan`), which is why the check takes them as an argument.
+**A count is not a completion.** `status` alone says whether an action item is done. `advance(by:)` moves an `open` item to `inProgress` — starting is a real status change — but reaching `goal` never checks an item off, and checking one off never requires reaching its goal. Progress exists so participants can see what's up mid-flight. The separate `Score` type on `Plan.scoreCard` was removed once UX testing showed scores and action-items pairing one-to-one; `Score`'s own doc comment had said it all along — *"Boolean -> goal is 1."*
+
+**Plan completion is gated by the checklist alone** — `Plan.isCompletable(given:)` is true when no `Task` is `.open` or `.inProgress`. Progress counts and alarms are advisory and never gate it. `Plan` does not store its tasks (they back-reference via `Task.plan`), which is why the check takes them as an argument.
 
 The deprecated `Event`, `PlanAction`, `ItemList`, and `Trip` types have been **removed**. Use `Plan`/`Occurrence`/`Collection`.
 
@@ -223,7 +225,7 @@ Synthesized `encode(to:)` already uses `encodeIfPresent` for optionals (so nulls
 
 | Reason to hand-write | Which half | Examples |
 |---|---|---|
-| A field defaults when absent (`?? []`, `?? .open`) | `init(from:)` | `Collection.members`, `Task.status`, `Plan.scoreCard` |
+| A field defaults when absent (`?? []`, `?? .open`) | `init(from:)` | `Collection.members`, `Task.status` |
 | Wild-web leniency | `init(from:)` | `Person.email`, `PostalAddress.postalCode`, `Schedule.byMonth` |
 | A `URL` field (a junk string must not sink the record) | `init(from:)` | `Place.url`, `Document.url` |
 | An empty collection should be omitted, not written as `[]` | `encode(to:)` | `Collection.members`, `Outline.nodes` |

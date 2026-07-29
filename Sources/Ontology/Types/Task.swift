@@ -36,6 +36,18 @@ public struct Task: Hashable, Sendable {
     public var schedulingIntent: SchedulingIntent?
     public var status: Status
     public var statusChangedAt: DateTime?
+    /// Optional target for a countable item — the 10 in "3 of 10 pages".
+    /// Absent means a plain check-off, which is the common case.
+    public var goal: Double?
+    /// How far along, against `goal`. Advisory only: `status` decides whether
+    /// the item is done. Noting progress lets participants see what's up
+    /// without anyone having to check the item off.
+    public var progress: Double?
+    /// What the count is of — "pages", "miles". Absent means a bare number.
+    public var unitLabel: String?
+    /// When `progress` last moved. A single stamp, not a history: advancing
+    /// overwrites, and the durable account of what happened is a `Record`.
+    public var progressUpdatedAt: DateTime?
     /// Lower number = higher priority.
     public var priority: Int?
     /// Alarms that prompt the assignee. These do not gate plan completion.
@@ -61,6 +73,10 @@ public struct Task: Hashable, Sendable {
         schedulingIntent: SchedulingIntent? = nil,
         status: Status = .open,
         statusChangedAt: DateTime? = nil,
+        goal: Double? = nil,
+        progress: Double? = nil,
+        unitLabel: String? = nil,
+        progressUpdatedAt: DateTime? = nil,
         priority: Int? = nil,
         alarms: [Alarm]? = nil,
         handles: [Handle]? = nil
@@ -77,9 +93,43 @@ public struct Task: Hashable, Sendable {
         self.schedulingIntent = schedulingIntent
         self.status = status
         self.statusChangedAt = statusChangedAt
+        self.goal = goal
+        self.progress = progress
+        self.unitLabel = unitLabel
+        self.progressUpdatedAt = progressUpdatedAt
         self.priority = priority
         self.alarms = alarms
         self.handles = handles
+    }
+}
+
+// MARK: - Progress
+
+extension Task {
+    /// Whether this item counts toward a target rather than being a plain check-off.
+    public var isCountable: Bool { goal != nil }
+
+    /// How far along, 0...1 — `nil` for a plain check-off, which has no fraction
+    /// to report. Clamped, so an overshoot still reads as complete.
+    public var fractionComplete: Double? {
+        guard let goal, goal > 0 else { return nil }
+        return min(max((progress ?? 0) / goal, 0), 1)
+    }
+
+    /// Note progress against `goal`, overwriting the previous value.
+    ///
+    /// Deliberately does **not** complete the item. Progress is what
+    /// participants can see along the way; "I did it" stays an explicit
+    /// check-off. Starting does move an `open` item to `inProgress`, which is a
+    /// genuine status change and stamps `statusChangedAt` as one.
+    public mutating func advance(by magnitude: Double, at dtg: Date = .now) {
+        guard goal != nil, magnitude != 0 else { return }
+        progress = max((progress ?? 0) + magnitude, 0)
+        progressUpdatedAt = DateTime(dtg)
+        if status == .open, (progress ?? 0) > 0 {
+            status = .inProgress
+            statusChangedAt = DateTime(dtg)
+        }
     }
 }
 
@@ -89,6 +139,7 @@ extension Task: Codable {
         case meta
         case name, description, plan, assignee, completedBy, occurrence, effort
         case dueDate, schedulingIntent, status, statusChangedAt
+        case goal, progress, unitLabel, progressUpdatedAt
         case priority, alarms, handles
     }
 
@@ -109,6 +160,10 @@ extension Task: Codable {
         let rawStatus: String? = try container.value(.status)
         status = rawStatus.flatMap(Status.init(rawValue:)) ?? .open
         statusChangedAt = try container.value(.statusChangedAt)
+        goal = try container.value(.goal)
+        progress = try container.value(.progress)
+        unitLabel = try container.value(.unitLabel)
+        progressUpdatedAt = try container.value(.progressUpdatedAt)
         priority = try container.value(.priority)
         alarms = try container.value(.alarms)
         handles = try container.value(.handles)

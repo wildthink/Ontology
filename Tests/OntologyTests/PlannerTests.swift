@@ -182,20 +182,49 @@ struct PlannerTests {
         #expect(plan.isCompletable(given: [done, skipped, cancelled]))
     }
 
-    @Test("Scores and alarms are advisory — neither blocks plan completion")
-    func testScoresAndAlarmsDoNotGateCompletion() {
-        var unfinished = Score(summary: "Sessions run", goal: 12)
-        unfinished.advance(by: 3)
+    @Test("Progress and alarms are advisory — neither blocks plan completion")
+    func testProgressAndAlarmsDoNotGateCompletion() {
+        var counted = Task(name: "Sessions run", status: .done, goal: 12)
+        counted.advance(by: 3)
 
         let plan = Plan(
             identifier: "plan.002",
             name: "Campaign",
-            alarms: [.minutesBefore(60)],
-            scoreCard: [unfinished]
+            alarms: [.minutesBefore(60)]
         )
 
-        #expect(!plan.scoreCard.isFinal)
-        #expect(plan.isCompletable(given: [Task(name: "Done", status: .done)]))
+        // Short of its goal, and checked off anyway — the check-off is the truth.
+        #expect(counted.fractionComplete == 0.25)
+        #expect(plan.isCompletable(given: [counted]))
+    }
+
+    // MARK: - Progress on an action item
+
+    @Test("Advancing notes progress without completing the item")
+    func testAdvanceDoesNotComplete() {
+        var task = Task(name: "Read the manual", goal: 10, unitLabel: "pages")
+        #expect(task.fractionComplete == 0)
+
+        task.advance(by: 4)
+        // Starting is a real status change; finishing still is not.
+        #expect(task.status == .inProgress)
+        #expect(task.progress == 4)
+        #expect(task.progressUpdatedAt != nil)
+
+        task.advance(by: 6)
+        #expect(task.fractionComplete == 1)
+        #expect(task.status == .inProgress, "reaching the goal never checks the item off")
+    }
+
+    @Test("A plain check-off has no progress to report and ignores advancing")
+    func testPlainTaskHasNoProgress() {
+        var task = Task(name: "Book the room")
+        #expect(!task.isCountable)
+        #expect(task.fractionComplete == nil)
+
+        task.advance(by: 3)
+        #expect(task.progress == nil)
+        #expect(task.status == .open)
     }
 
     // MARK: - Recording what happened

@@ -25,8 +25,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/davedelong/time.git", branch: "main"),
-        .package(url: "https://github.com/davdroman/Period.git", from: "1.1.0"),
-        .package(url: "https://github.com/wildthink/Units", branch: "main"),
         .package(url: "https://github.com/mattt/swift-yyjson.git", from: "0.5.0"),
         .package(url: "https://github.com/marcprux/universal.git", from: "6.0.0"),
         .package(url: "https://github.com/swiftlang/swift-markdown.git", from: "0.6.0"),
@@ -38,8 +36,6 @@ let package = Package(
             name: "Ontology",
             dependencies: [
                 .product(name: "Time", package: "time"),
-                .product(name: "Period", package: "period"),
-                .product(name: "Units", package: "Units"),
                 .product(name: "YYJSON", package: "swift-yyjson"),
                 .product(name: "Universal", package: "universal"),
             ]
@@ -58,11 +54,7 @@ let package = Package(
         ),
         .target(
             name: "Presentation",
-            dependencies: [
-                "OntologyApple",
-                .product(name: "Period", package: "period"),
-                .product(name: "Units", package: "Units"),
-            ]
+            dependencies: ["OntologyApple"]
         ),
         .target(
             name: "OntologyGoogle",

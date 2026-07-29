@@ -59,7 +59,6 @@ A plan may be solo, shared socially, or collaborative. It carries:
 - an origin: a seed opportunity, or a self-stated goal
 - action-items (the checklist itself)
 - participants
-- an optional score card — see [Score](#score)
 - optional alarms
 - notes / narrative body
 
@@ -76,9 +75,10 @@ participant. The type is `Task`; "action item" is the user-facing word for it.
 - can carry an estimated time-to-complete
 - can record who completed it, and when
 - optional due date, or a relative scheduling intent (`asSoonAsPossible` / `soon` / `later`)
-- **pragmatically atomic** — an action-item holds its current status and nothing else.
-  No history of progress steps, no partial values. It is open, in-progress, done,
-  skipped, or cancelled.
+- **atomic to complete** — it is open, in-progress, done, skipped, or cancelled, and
+  `status` alone says which. An item may also carry an optional count toward a goal
+  (see [Progress](#progress)), but that is a note of what's up, never a second answer
+  to "is this done?". No history of progress steps either way.
 - can be skipped or cancelled; doing so clears it from the checklist and unblocks plan
   completion
 
@@ -96,17 +96,26 @@ describes, and `outcome` narrates what actually happened.
 Activities and attendances are recorded as `Occurrence` values back-referencing the plan.
 Together, Occurrences (what happened, when) and Records (what came of it) are the journal.
 
-### Score
+### Progress
 
-An optional progress gauge on a **Plan** — "n of 10", "3 of 5 miles", "keeping score".
+An optional count on an **action-item** — "3 of 10 pages", "8 of 10 miles".
 
-- lives on the Plan only. Action-items do not carry progress values.
-- **mutated in place**. A score has a current value, a goal, and a last-updated stamp.
-  It keeps no entry history and no audit trail — advancing a score overwrites it.
-- advisory. A score card is an indicator, not a gate.
+- lives on the `Task`, as `goal` / `progress` / `unitLabel`. A plain check-off leaves
+  `goal` nil, which is the common case.
+- **advisory, never the truth about doneness.** `status` decides whether an item is
+  done; progress is what participants can see along the way. Reaching the goal does not
+  check the item off, and checking it off does not require reaching the goal.
+- **mutated in place**. `advance(by:)` overwrites the value and moves the single
+  `progressUpdatedAt` stamp. No entry history, no audit trail.
 
-The split is deliberate: **the score is a live gauge with no memory; the Record is the
-memory.**
+This was a separate `Score` type on `Plan.scoreCard` until UX testing found scores and
+action-items pairing off one-to-one in practice — two objects, one concept, and friction
+where they met. `Score` documented its own collapse: *"Boolean -> goal is 1."* A checkbox
+was always a score with a goal of 1, so the count moved onto the item and the type went
+away.
+
+The remaining split is deliberate: **progress is a live gauge with no memory; the Record
+is the memory.**
 
 ### Participant
 
@@ -166,13 +175,13 @@ reminders. Skipping this step entirely is a supported way to use a plan.
 ### 6. Execution
 
 The user works the list: adds and updates action-items, checks them off, skips what no
-longer applies, and advances any scores.
+longer applies, and notes progress on anything counted.
 
 ### 7. Completion
 
 The user marks the plan accomplished. A plan may be completed when no action-item is
 still `open` or `inProgress` — clear stragglers by marking them done, skipped, or
-cancelled. Score cards and alarms never block completion.
+cancelled. Progress counts and alarms never block completion.
 
 ### 8. Recording
 
@@ -191,9 +200,8 @@ The primary top-level object is `Plan`.
 
 These attach to a `Plan`:
 
-- action-items (`Task.plan` back-reference)
+- action-items (`Task.plan` back-reference), each carrying its own optional progress count
 - participants
-- score card
 - notes
 - optionally: alarms, and Occurrences via `Occurrence.plan`
 
@@ -215,7 +223,7 @@ concepts above, and what is still missing.
 | Plan | `Plan` | `Types/Plan/Plan.swift` |
 | Action-Item | `Task` | `Types/Task.swift` |
 | Record | `Record` | `Types/Record.swift` |
-| Score | `Score` / `ScoreCard` on `Plan.scoreCard` | `Types/Plan/Score.swift` |
+| Progress | `goal` / `progress` / `unitLabel` on `Task` | `Types/Task.swift` |
 | ScheduleItem | `Occurrence` with `plan` set | `Types/Occurrence.swift` |
 | Alarm | `Alarm` | `Types/Alarm.swift` |
 | Participant | `Person` / `Organization`, referenced by `HolonRef` | `Types/` |
@@ -223,33 +231,14 @@ concepts above, and what is still missing.
 
 ### Schema delta
 
-What this spec requires that the code does not yet have:
-
-**`Task` gains three fields**
-
-| Field | Type | Why |
-|---|---|---|
-| `effort` | `QuantitativeValue?` | estimated time-to-complete, mirroring `Plan.effort` |
-| `completedBy` | `HolonRef?` | who actually did it, distinct from `assignee` (who was asked). Paired with the existing `statusChangedAt` for when. |
-| `occurrence` | `HolonRef?` | the meeting or work block that *is* this action, when one exists |
-
-**`Score` sheds its history machinery**
-
-`Score.Entry`, `entries`, `record(_:)`, and the entries-derived computed properties are
-commented out in `Score.swift`. Under the mutate-in-place decision they are not coming
-back and should be deleted rather than left as ballast.
-
-**`Plan` gains a completion check**
-
-A helper answering "can this plan be marked completed?" given its action-items — no item
-`open` or `inProgress`. `Plan` does not hold its tasks, so this takes them as an argument
-rather than reading a stored field.
+None. The code and this spec agree.
 
 ### What is deliberately absent
 
-- no per-action-item progress value — score is plan-level only
-- no progress history anywhere — scores overwrite, Records accumulate
-- no `log` array on `Plan` — that would reintroduce the history just removed from `Score`
+- no progress history anywhere — progress overwrites, Records accumulate
+- no `log` array on `Plan` — that would reintroduce the history deleted with `Score.Entry`
+- no separate score or gauge type — a count lives on the action-item it counts
+- no plan-level progress value — a plan's progress is its checklist
 - no `Opportunity` or `ScheduleItem` type — both are patterns
 - no requirement that a plan have alarms, reminders, calendar events, or commitments
 
